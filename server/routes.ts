@@ -182,26 +182,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/batches", async (req, res) => {
     try {
-      // Create batch data with automatic code generation
-      const code = String(Math.floor(Math.random() * 900) + 100).padStart(3, '0');
-      
-      const batchData = {
-        productId: parseInt(req.body.productId),
-        quantity: parseInt(req.body.quantity),
-        cutDate: new Date(req.body.cutDate),
-        status: req.body.status || "waiting",
-        workshopId: req.body.workshopId ? parseInt(req.body.workshopId) : null,
-        expectedReturnDate: req.body.expectedReturnDate ? new Date(req.body.expectedReturnDate) : null,
-        observations: req.body.observations || null,
-        sentToProductionDate: null,
-        actualReturnDate: null,
-        conferenceResult: null,
-        imageUrl: null,
-      };
-      
+      const batchData = insertBatchSchema.parse(req.body);
       const batch = await storage.createBatch(batchData);
       
-      // Add initial history entry
       await storage.addBatchHistory({
         batchId: batch.id,
         action: "Lote criado",
@@ -210,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.status(201).json(batch);
-    } catch (error: any) {
+    } catch (error) {
       res.status(400).json({ message: "Invalid batch data" });
     }
   });
