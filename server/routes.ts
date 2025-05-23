@@ -180,10 +180,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/batches", async (req, res) => {
     try {
-      console.log("Received batch data:", req.body);
+      console.log("=== Batch Creation Debug ===");
+      console.log("Raw request body:", JSON.stringify(req.body, null, 2));
+      console.log("Request body types:", Object.keys(req.body).map(key => `${key}: ${typeof req.body[key]}`));
+      
       const batchData = insertBatchSchema.parse(req.body);
-      console.log("Parsed batch data:", batchData);
+      console.log("Successfully parsed batch data:", JSON.stringify(batchData, null, 2));
+      
       const batch = await storage.createBatch(batchData);
+      console.log("Successfully created batch:", JSON.stringify(batch, null, 2));
       
       // Add initial history entry
       await storage.addBatchHistory({
@@ -195,11 +200,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(batch);
     } catch (error) {
-      console.error("Batch creation error:", error);
+      console.error("=== Batch Creation Error ===");
+      console.error("Error details:", error);
       if (error instanceof Error) {
-        res.status(400).json({ message: "Invalid batch data", error: error.message });
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        res.status(400).json({ message: "Invalid batch data", error: error.message, details: error.stack });
       } else {
-        res.status(400).json({ message: "Invalid batch data" });
+        res.status(400).json({ message: "Invalid batch data", error: String(error) });
       }
     }
   });

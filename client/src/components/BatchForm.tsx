@@ -21,7 +21,7 @@ interface BatchFormProps {
 
 const batchFormSchema = z.object({
   productId: z.string().min(1, "Produto é obrigatório"),
-  quantity: z.number().min(1, "Quantidade deve ser maior que 0"),
+  quantity: z.coerce.number().min(1, "Quantidade deve ser maior que 0"),
   cutDate: z.string().min(1, "Data de corte é obrigatória"),
   status: z.string().min(1, "Status é obrigatório"),
   workshopId: z.string().optional(),
