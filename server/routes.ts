@@ -181,16 +181,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/batches", async (req, res) => {
-    console.log("=== Batch creation attempt ===");
-    console.log("Request body:", req.body);
-    
-    // Validate required fields first
-    if (!req.body.productId || !req.body.quantity || !req.body.cutDate) {
-      console.log("Missing required fields");
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-    
     try {
+      // Bypass schema validation and create batch directly
       const batchData = {
         productId: parseInt(req.body.productId),
         quantity: parseInt(req.body.quantity),
@@ -205,10 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         imageUrl: null,
       };
       
-      console.log("Prepared batch data:", batchData);
-      
       const batch = await storage.createBatch(batchData);
-      console.log("Created batch:", batch);
       
       await storage.addBatchHistory({
         batchId: batch.id,
@@ -218,9 +207,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.status(201).json(batch);
-    } catch (error) {
-      console.error("=== Batch creation error ===", error);
-      res.status(500).json({ message: "Server error creating batch" });
+    } catch (error: any) {
+      console.error("Batch creation error:", error);
+      res.status(400).json({ message: "Failed to create batch", error: error.message });
     }
   });
 
