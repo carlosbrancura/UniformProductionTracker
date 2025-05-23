@@ -2,6 +2,8 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertProductSchema, insertWorkshopSchema, insertBatchSchema, insertBatchHistorySchema } from "@shared/schema";
+import { db } from "./db";
+import { batches, batchHistory } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -180,7 +182,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/batches", async (req, res) => {
     try {
-      const batchData = insertBatchSchema.parse(req.body);
+      // Simple data preparation without schema validation
+      const batchData = {
+        productId: parseInt(req.body.productId),
+        quantity: parseInt(req.body.quantity),
+        cutDate: new Date(req.body.cutDate),
+        status: req.body.status || "waiting",
+        workshopId: req.body.workshopId ? parseInt(req.body.workshopId) : null,
+        expectedReturnDate: req.body.expectedReturnDate ? new Date(req.body.expectedReturnDate) : null,
+        observations: req.body.observations || null,
+        sentToProductionDate: req.body.sentToProductionDate ? new Date(req.body.sentToProductionDate) : null,
+        actualReturnDate: req.body.actualReturnDate ? new Date(req.body.actualReturnDate) : null,
+        conferenceResult: req.body.conferenceResult || null,
+        imageUrl: req.body.imageUrl || null,
+      };
+      
       const batch = await storage.createBatch(batchData);
       
       // Add initial history entry
@@ -194,7 +210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(batch);
     } catch (error: any) {
       console.error("Batch creation error:", error);
-      res.status(400).json({ message: "Invalid batch data", error: error.message });
+      res.status(400).json({ message: "Failed to create batch", error: error.message });
     }
   });
 
