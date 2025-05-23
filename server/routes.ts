@@ -181,9 +181,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/batches", async (req, res) => {
+    console.log("=== Batch creation attempt ===");
+    console.log("Request body:", req.body);
+    
+    // Validate required fields first
+    if (!req.body.productId || !req.body.quantity || !req.body.cutDate) {
+      console.log("Missing required fields");
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+    
     try {
-      const batchData = insertBatchSchema.parse(req.body);
+      const batchData = {
+        productId: parseInt(req.body.productId),
+        quantity: parseInt(req.body.quantity),
+        cutDate: new Date(req.body.cutDate),
+        status: req.body.status || "waiting",
+        workshopId: req.body.workshopId ? parseInt(req.body.workshopId) : null,
+        expectedReturnDate: req.body.expectedReturnDate ? new Date(req.body.expectedReturnDate) : null,
+        observations: req.body.observations || null,
+        sentToProductionDate: null,
+        actualReturnDate: null,
+        conferenceResult: null,
+        imageUrl: null,
+      };
+      
+      console.log("Prepared batch data:", batchData);
+      
       const batch = await storage.createBatch(batchData);
+      console.log("Created batch:", batch);
       
       await storage.addBatchHistory({
         batchId: batch.id,
@@ -194,7 +219,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(batch);
     } catch (error) {
-      res.status(400).json({ message: "Invalid batch data" });
+      console.error("=== Batch creation error ===", error);
+      res.status(500).json({ message: "Server error creating batch" });
     }
   });
 
