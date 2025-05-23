@@ -180,35 +180,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/batches", async (req, res) => {
     try {
-      // Clean the request data to match expected schema
-      const cleanedData = {
+      // Validate and clean the request data
+      const batchData = {
         productId: parseInt(req.body.productId),
         quantity: parseInt(req.body.quantity),
         cutDate: new Date(req.body.cutDate),
-        status: req.body.status,
+        status: req.body.status || "waiting",
         workshopId: req.body.workshopId ? parseInt(req.body.workshopId) : null,
         expectedReturnDate: req.body.expectedReturnDate ? new Date(req.body.expectedReturnDate) : null,
         observations: req.body.observations || null,
-        sentToProductionDate: req.body.sentToProductionDate ? new Date(req.body.sentToProductionDate) : null,
-        actualReturnDate: req.body.actualReturnDate ? new Date(req.body.actualReturnDate) : null,
-        conferenceResult: req.body.conferenceResult || null,
-        imageUrl: req.body.imageUrl || null,
+        sentToProductionDate: null,
+        actualReturnDate: null,
+        conferenceResult: null,
+        imageUrl: null,
       };
 
-      const batch = await storage.createBatch(cleanedData);
+      // Validate required fields
+      if (!batchData.productId || !batchData.quantity || !batchData.cutDate || !batchData.status) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const batch = await storage.createBatch(batchData);
       
       // Add initial history entry
       await storage.addBatchHistory({
         batchId: batch.id,
         action: "Lote criado",
-        userId: 1, // TODO: Get from session
+        userId: 1,
         notes: null
       });
       
       res.status(201).json(batch);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Batch creation error:", error);
-      res.status(400).json({ message: "Failed to create batch", error: error.message });
+      res.status(400).json({ message: "Invalid batch data", error: error.message });
     }
   });
 
