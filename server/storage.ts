@@ -258,55 +258,48 @@ export class DatabaseStorage implements IStorage {
 
   // Batch methods
   async getBatch(id: number): Promise<Batch | undefined> {
-    return this.batches.get(id);
+    const [batch] = await db.select().from(batches).where(eq(batches.id, id));
+    return batch || undefined;
   }
 
   async getBatchByCode(code: string): Promise<Batch | undefined> {
-    return Array.from(this.batches.values()).find(batch => batch.code === code);
+    const [batch] = await db.select().from(batches).where(eq(batches.code, code));
+    return batch || undefined;
   }
 
   async getAllBatches(): Promise<Batch[]> {
-    return Array.from(this.batches.values());
+    return await db.select().from(batches);
   }
 
   async createBatch(insertBatch: InsertBatch): Promise<Batch> {
-    const id = this.currentBatchId++;
-    const code = String(this.batchCodeCounter++).padStart(3, '0');
-    const batch: Batch = { ...insertBatch, id, code };
-    this.batches.set(id, batch);
+    const code = this.batchCodeCounter.toString().padStart(3, '0');
+    this.batchCodeCounter++;
+    const [batch] = await db.insert(batches).values({ ...insertBatch, code }).returning();
     return batch;
   }
 
   async updateBatch(id: number, batchData: Partial<Batch>): Promise<Batch | undefined> {
-    const batch = this.batches.get(id);
-    if (!batch) return undefined;
-    
-    const updatedBatch = { ...batch, ...batchData };
-    this.batches.set(id, updatedBatch);
-    return updatedBatch;
+    const [batch] = await db.update(batches).set(batchData).where(eq(batches.id, id)).returning();
+    return batch || undefined;
   }
 
   async deleteBatch(id: number): Promise<boolean> {
-    return this.batches.delete(id);
+    const result = await db.delete(batches).where(eq(batches.id, id));
+    return (result.rowCount || 0) > 0;
   }
 
   // Batch History methods
   async getBatchHistory(batchId: number): Promise<BatchHistory[]> {
-    return Array.from(this.batchHistories.values())
-      .filter(history => history.batchId === batchId)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return await db.select().from(batchHistory).where(eq(batchHistory.batchId, batchId)).orderBy(desc(batchHistory.timestamp));
   }
 
   async addBatchHistory(insertHistory: InsertBatchHistory): Promise<BatchHistory> {
-    const id = this.currentHistoryId++;
-    const history: BatchHistory = { 
-      ...insertHistory, 
-      id, 
-      timestamp: new Date() 
-    };
-    this.batchHistories.set(id, history);
+    const [history] = await db.insert(batchHistory).values({
+      ...insertHistory,
+      timestamp: new Date()
+    }).returning();
     return history;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
