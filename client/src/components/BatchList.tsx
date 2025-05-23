@@ -39,8 +39,10 @@ export default function BatchList({ batches, products, workshops, onBatchClick }
 
   const filteredBatches = batches.filter(batch => {
     const dateMatch = !dateFilter || formatDate(batch.cutDate).includes(dateFilter);
-    const workshopMatch = !workshopFilter || batch.workshopId?.toString() === workshopFilter;
-    const statusMatch = !statusFilter || batch.status === statusFilter;
+    const workshopMatch = !workshopFilter || workshopFilter === "all" || 
+      (workshopFilter === "internal" && !batch.workshopId) || 
+      batch.workshopId?.toString() === workshopFilter;
+    const statusMatch = !statusFilter || statusFilter === "all" || batch.status === statusFilter;
     
     return dateMatch && workshopMatch && statusMatch;
   });
@@ -85,7 +87,7 @@ export default function BatchList({ batches, products, workshops, onBatchClick }
                 <SelectValue placeholder="Filtrar por oficina" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as oficinas</SelectItem>
+                <SelectItem value="all">Todas as oficinas</SelectItem>
                 <SelectItem value="internal">Produção Interna</SelectItem>
                 {workshops.map(workshop => (
                   <SelectItem key={workshop.id} value={workshop.id.toString()}>
@@ -102,7 +104,7 @@ export default function BatchList({ batches, products, workshops, onBatchClick }
                 <SelectValue placeholder="Filtrar por status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os status</SelectItem>
+                <SelectItem value="all">Todos os status</SelectItem>
                 {Object.entries(statusLabels).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
