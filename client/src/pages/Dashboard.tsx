@@ -33,9 +33,9 @@ export default function Dashboard() {
   });
 
   const filteredBatches = batches.filter((batch) => {
-    if (filters.product && batch.productId !== parseInt(filters.product)) return false;
-    if (filters.workshop && batch.workshopId !== parseInt(filters.workshop)) return false;
-    if (filters.status && batch.status !== filters.status) return false;
+    if (filters.product && filters.product !== "all" && batch.productId !== parseInt(filters.product)) return false;
+    if (filters.workshop && filters.workshop !== "all" && batch.workshopId !== parseInt(filters.workshop)) return false;
+    if (filters.status && filters.status !== "all" && batch.status !== filters.status) return false;
     if (filters.dateStart) {
       const filterDate = new Date(filters.dateStart);
       const batchDate = new Date(batch.cutDate);
@@ -77,7 +77,7 @@ export default function Dashboard() {
                   <SelectValue placeholder="Todos os produtos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os produtos</SelectItem>
+                  <SelectItem value="all">Todos os produtos</SelectItem>
                   {products.map((product) => (
                     <SelectItem key={product.id} value={product.id.toString()}>
                       {product.name}
@@ -94,7 +94,7 @@ export default function Dashboard() {
                   <SelectValue placeholder="Todas as oficinas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as oficinas</SelectItem>
+                  <SelectItem value="all">Todas as oficinas</SelectItem>
                   {workshops.map((workshop) => (
                     <SelectItem key={workshop.id} value={workshop.id.toString()}>
                       {workshop.name}
@@ -111,7 +111,7 @@ export default function Dashboard() {
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os status</SelectItem>
+                  <SelectItem value="all">Todos os status</SelectItem>
                   <SelectItem value="waiting">Aguardando</SelectItem>
                   <SelectItem value="internal_production">Produção Interna</SelectItem>
                   <SelectItem value="external_workshop">Oficina Externa</SelectItem>
