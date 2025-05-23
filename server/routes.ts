@@ -180,15 +180,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/batches", async (req, res) => {
     try {
-      console.log("=== Batch Creation Debug ===");
-      console.log("Raw request body:", JSON.stringify(req.body, null, 2));
-      console.log("Request body types:", Object.keys(req.body).map(key => `${key}: ${typeof req.body[key]}`));
-      
-      const batchData = insertBatchSchema.parse(req.body);
-      console.log("Successfully parsed batch data:", JSON.stringify(batchData, null, 2));
-      
-      const batch = await storage.createBatch(batchData);
-      console.log("Successfully created batch:", JSON.stringify(batch, null, 2));
+      // Clean the request data to match expected schema
+      const cleanedData = {
+        productId: parseInt(req.body.productId),
+        quantity: parseInt(req.body.quantity),
+        cutDate: new Date(req.body.cutDate),
+        status: req.body.status,
+        workshopId: req.body.workshopId ? parseInt(req.body.workshopId) : null,
+        expectedReturnDate: req.body.expectedReturnDate ? new Date(req.body.expectedReturnDate) : null,
+        observations: req.body.observations || null,
+        sentToProductionDate: req.body.sentToProductionDate ? new Date(req.body.sentToProductionDate) : null,
+        actualReturnDate: req.body.actualReturnDate ? new Date(req.body.actualReturnDate) : null,
+        conferenceResult: req.body.conferenceResult || null,
+        imageUrl: req.body.imageUrl || null,
+      };
+
+      const batch = await storage.createBatch(cleanedData);
       
       // Add initial history entry
       await storage.addBatchHistory({
@@ -200,15 +207,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(batch);
     } catch (error) {
-      console.error("=== Batch Creation Error ===");
-      console.error("Error details:", error);
-      if (error instanceof Error) {
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-        res.status(400).json({ message: "Invalid batch data", error: error.message, details: error.stack });
-      } else {
-        res.status(400).json({ message: "Invalid batch data", error: String(error) });
-      }
+      console.error("Batch creation error:", error);
+      res.status(400).json({ message: "Failed to create batch", error: error.message });
     }
   });
 
