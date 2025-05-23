@@ -3,8 +3,11 @@ import {
   Product, InsertProduct,
   Workshop, InsertWorkshop,
   Batch, InsertBatch,
-  BatchHistory, InsertBatchHistory
+  BatchHistory, InsertBatchHistory,
+  users, products, workshops, batches, batchHistory
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -42,259 +45,215 @@ export interface IStorage {
   addBatchHistory(history: InsertBatchHistory): Promise<BatchHistory>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private products: Map<number, Product>;
-  private workshops: Map<number, Workshop>;
-  private batches: Map<number, Batch>;
-  private batchHistories: Map<number, BatchHistory>;
-  
-  private currentUserId: number;
-  private currentProductId: number;
-  private currentWorkshopId: number;
-  private currentBatchId: number;
-  private currentHistoryId: number;
-  private batchCodeCounter: number;
+export class DatabaseStorage implements IStorage {
+  private batchCodeCounter: number = 52; // Starting from 052 based on seed data
 
   constructor() {
-    this.users = new Map();
-    this.products = new Map();
-    this.workshops = new Map();
-    this.batches = new Map();
-    this.batchHistories = new Map();
-    
-    this.currentUserId = 1;
-    this.currentProductId = 1;
-    this.currentWorkshopId = 1;
-    this.currentBatchId = 1;
-    this.currentHistoryId = 1;
-    this.batchCodeCounter = 1;
-
     this.seedData();
   }
 
-  private seedData() {
-    // Seed users
-    const admin: User = {
-      id: this.currentUserId++,
-      username: "admin",
-      password: "admin123",
-      role: "admin",
-      permissions: "view,register,edit"
-    };
-    this.users.set(admin.id, admin);
+  private async seedData() {
+    try {
+      // Check if data already exists
+      const existingUsers = await db.select().from(users).limit(1);
+      if (existingUsers.length > 0) return;
 
-    const supervisor: User = {
-      id: this.currentUserId++,
-      username: "supervisor",
-      password: "super123", 
-      role: "production_supervisor",
-      permissions: "view,edit"
-    };
-    this.users.set(supervisor.id, supervisor);
+      // Seed users
+      await db.insert(users).values([
+        {
+          username: "admin",
+          password: "admin123",
+          role: "admin",
+          permissions: "view,register,edit"
+        },
+        {
+          username: "supervisor",
+          password: "super123", 
+          role: "production_supervisor",
+          permissions: "view,edit"
+        }
+      ]);
 
-    // Seed products
-    const product1: Product = {
-      id: this.currentProductId++,
-      name: "Camisa Social Masculina",
-      code: "CAMISA-001",
-      description: "Camisa social masculina em tecido misto, gola italiana, manga longa com punho duplo.",
-      fabricType: "Algodão/Poliéster (60/40)",
-      fabricMetersPerPiece: "1.8m",
-      notions: [
-        { name: "Botões", quantity: "8 unidades" },
-        { name: "Entretela de gola", quantity: "0.1m" },
-        { name: "Linha de costura", quantity: "1 cone" }
-      ],
-      notes: "Atenção especial para alinhamento das listras"
-    };
-    this.products.set(product1.id, product1);
+      // Seed products
+      await db.insert(products).values([
+        {
+          name: "Camisa Social Masculina",
+          code: "CAMISA-001",
+          description: "Camisa social masculina em tecido misto, gola italiana, manga longa com punho duplo.",
+          fabricType: "Algodão/Poliéster (60/40)",
+          fabricMetersPerPiece: "1.8m",
+          notions: [
+            { name: "Botões", quantity: "8 unidades" },
+            { name: "Entretela de gola", quantity: "0.1m" },
+            { name: "Linha de costura", quantity: "1 cone" }
+          ],
+          notes: "Atenção especial para alinhamento das listras"
+        },
+        {
+          name: "Calça Social Feminina", 
+          code: "CALCA-002",
+          description: "Calça social feminina alfaiataria, cintura alta, corte reto, com forro parcial.",
+          fabricType: "Lã/Poliéster (70/30)",
+          fabricMetersPerPiece: "1.2m",
+          notions: [
+            { name: "Zíper invisível", quantity: "1 unidade" },
+            { name: "Forro viscose", quantity: "0.6m" },
+            { name: "Linha de costura", quantity: "1 cone" }
+          ],
+          notes: null
+        }
+      ]);
 
-    const product2: Product = {
-      id: this.currentProductId++,
-      name: "Calça Social Feminina", 
-      code: "CALCA-002",
-      description: "Calça social feminina alfaiataria, cintura alta, corte reto, com forro parcial.",
-      fabricType: "Lã/Poliéster (70/30)",
-      fabricMetersPerPiece: "1.2m",
-      notions: [
-        { name: "Zíper invisível", quantity: "1 unidade" },
-        { name: "Forro viscose", quantity: "0.6m" },
-        { name: "Linha de costura", quantity: "1 cone" }
-      ],
-      notes: null
-    };
-    this.products.set(product2.id, product2);
+      // Seed workshops
+      await db.insert(workshops).values([
+        {
+          name: "Oficina de Costura Silva",
+          manager: "Maria Silva",
+          phone: "(11) 99999-1234",
+          address: "Rua das Flores, 123 - Vila Industrial",
+          serviceType: "Costura, Acabamento",
+          capacity: "50 peças/dia",
+          color: "#3B82F6"
+        },
+        {
+          name: "Atelier Bordados Premium",
+          manager: "Ana Costa", 
+          phone: "(11) 98888-5678",
+          address: "Av. Central, 456 - Centro",
+          serviceType: "Bordado, Aplicações",
+          capacity: "30 peças/dia",
+          color: "#F59E0B"
+        }
+      ]);
 
-    // Seed workshops
-    const workshop1: Workshop = {
-      id: this.currentWorkshopId++,
-      name: "Oficina de Costura Silva",
-      manager: "Maria Silva",
-      phone: "(11) 99999-1234",
-      address: "Rua das Flores, 123 - Vila Industrial",
-      serviceType: "Costura, Acabamento",
-      capacity: "50 peças/dia",
-      color: "#3B82F6"
-    };
-    this.workshops.set(workshop1.id, workshop1);
-
-    const workshop2: Workshop = {
-      id: this.currentWorkshopId++,
-      name: "Atelier Bordados Premium",
-      manager: "Ana Costa", 
-      phone: "(11) 98888-5678",
-      address: "Av. Central, 456 - Centro",
-      serviceType: "Bordado, Aplicações",
-      capacity: "30 peças/dia",
-      color: "#F59E0B"
-    };
-    this.workshops.set(workshop2.id, workshop2);
-
-    // Seed batches
-    const batch1: Batch = {
-      id: this.currentBatchId++,
-      code: "051",
-      productId: product1.id,
-      quantity: 100,
-      cutDate: new Date("2024-12-23"),
-      status: "external_workshop",
-      workshopId: workshop1.id,
-      sentToProductionDate: new Date("2024-12-23T14:30:00"),
-      expectedReturnDate: new Date("2024-12-25"),
-      actualReturnDate: null,
-      conferenceResult: null,
-      observations: "Tecido cortado conforme especificação. Atenção especial para o alinhamento das listras.",
-      imageUrl: null
-    };
-    this.batches.set(batch1.id, batch1);
-
-    const batch2: Batch = {
-      id: this.currentBatchId++,
-      code: "025",
-      productId: product2.id,
-      quantity: 75,
-      cutDate: new Date("2024-12-25"),
-      status: "external_workshop", 
-      workshopId: workshop2.id,
-      sentToProductionDate: new Date("2024-12-25T09:00:00"),
-      expectedReturnDate: new Date("2024-12-26"),
-      actualReturnDate: null,
-      conferenceResult: null,
-      observations: "Lote para produção urgente",
-      imageUrl: null
-    };
-    this.batches.set(batch2.id, batch2);
-
-    const batch3: Batch = {
-      id: this.currentBatchId++,
-      code: "040",
-      productId: product1.id,
-      quantity: 50,
-      cutDate: new Date("2024-12-25"),
-      status: "internal_production",
-      workshopId: null,
-      sentToProductionDate: new Date("2024-12-25T08:00:00"),
-      expectedReturnDate: new Date("2024-12-28"),
-      actualReturnDate: null,
-      conferenceResult: null,
-      observations: "Produção interna - linha de produção 2",
-      imageUrl: null
-    };
-    this.batches.set(batch3.id, batch3);
-
-    this.batchCodeCounter = 52; // Next code will be 052
+      // Seed batches
+      await db.insert(batches).values([
+        {
+          code: "051",
+          productId: 1,
+          quantity: 100,
+          cutDate: new Date("2024-12-23"),
+          status: "external_workshop",
+          workshopId: 1,
+          sentToProductionDate: new Date("2024-12-23T14:30:00"),
+          expectedReturnDate: new Date("2024-12-25"),
+          actualReturnDate: null,
+          conferenceResult: null,
+          observations: "Tecido cortado conforme especificação. Atenção especial para o alinhamento das listras.",
+          imageUrl: null
+        },
+        {
+          code: "025",
+          productId: 2,
+          quantity: 75,
+          cutDate: new Date("2024-12-25"),
+          status: "external_workshop", 
+          workshopId: 2,
+          sentToProductionDate: new Date("2024-12-25T09:00:00"),
+          expectedReturnDate: new Date("2024-12-26"),
+          actualReturnDate: null,
+          conferenceResult: null,
+          observations: "Lote para produção urgente",
+          imageUrl: null
+        },
+        {
+          code: "040",
+          productId: 1,
+          quantity: 50,
+          cutDate: new Date("2024-12-25"),
+          status: "internal_production",
+          workshopId: null,
+          sentToProductionDate: new Date("2024-12-25T08:00:00"),
+          expectedReturnDate: new Date("2024-12-28"),
+          actualReturnDate: null,
+          conferenceResult: null,
+          observations: "Produção interna - linha de produção 2",
+          imageUrl: null
+        }
+      ]);
+    } catch (error) {
+      console.error("Error seeding data:", error);
+    }
   }
 
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    return await db.select().from(users);
   }
 
   async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    
-    const updatedUser = { ...user, ...userData };
-    this.users.set(id, updatedUser);
-    return updatedUser;
+    const [user] = await db.update(users).set(userData).where(eq(users.id, id)).returning();
+    return user || undefined;
   }
 
   async deleteUser(id: number): Promise<boolean> {
-    return this.users.delete(id);
+    const result = await db.delete(users).where(eq(users.id, id));
+    return result.rowCount > 0;
   }
 
   // Product methods
   async getProduct(id: number): Promise<Product | undefined> {
-    return this.products.get(id);
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product || undefined;
   }
 
   async getAllProducts(): Promise<Product[]> {
-    return Array.from(this.products.values());
+    return await db.select().from(products);
   }
 
   async createProduct(insertProduct: InsertProduct): Promise<Product> {
-    const id = this.currentProductId++;
-    const product: Product = { ...insertProduct, id };
-    this.products.set(id, product);
+    const [product] = await db.insert(products).values(insertProduct).returning();
     return product;
   }
 
   async updateProduct(id: number, productData: Partial<InsertProduct>): Promise<Product | undefined> {
-    const product = this.products.get(id);
-    if (!product) return undefined;
-    
-    const updatedProduct = { ...product, ...productData };
-    this.products.set(id, updatedProduct);
-    return updatedProduct;
+    const [product] = await db.update(products).set(productData).where(eq(products.id, id)).returning();
+    return product || undefined;
   }
 
   async deleteProduct(id: number): Promise<boolean> {
-    return this.products.delete(id);
+    const result = await db.delete(products).where(eq(products.id, id));
+    return result.rowCount > 0;
   }
 
   // Workshop methods
   async getWorkshop(id: number): Promise<Workshop | undefined> {
-    return this.workshops.get(id);
+    const [workshop] = await db.select().from(workshops).where(eq(workshops.id, id));
+    return workshop || undefined;
   }
 
   async getAllWorkshops(): Promise<Workshop[]> {
-    return Array.from(this.workshops.values());
+    return await db.select().from(workshops);
   }
 
   async createWorkshop(insertWorkshop: InsertWorkshop): Promise<Workshop> {
-    const id = this.currentWorkshopId++;
-    const workshop: Workshop = { ...insertWorkshop, id };
-    this.workshops.set(id, workshop);
+    const [workshop] = await db.insert(workshops).values(insertWorkshop).returning();
     return workshop;
   }
 
   async updateWorkshop(id: number, workshopData: Partial<InsertWorkshop>): Promise<Workshop | undefined> {
-    const workshop = this.workshops.get(id);
-    if (!workshop) return undefined;
-    
-    const updatedWorkshop = { ...workshop, ...workshopData };
-    this.workshops.set(id, updatedWorkshop);
-    return updatedWorkshop;
+    const [workshop] = await db.update(workshops).set(workshopData).where(eq(workshops.id, id)).returning();
+    return workshop || undefined;
   }
 
   async deleteWorkshop(id: number): Promise<boolean> {
-    return this.workshops.delete(id);
+    const result = await db.delete(workshops).where(eq(workshops.id, id));
+    return (result.rowCount || 0) > 0;
   }
 
   // Batch methods
