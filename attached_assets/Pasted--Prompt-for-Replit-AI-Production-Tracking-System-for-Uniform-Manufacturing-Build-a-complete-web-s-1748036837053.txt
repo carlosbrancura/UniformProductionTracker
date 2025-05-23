@@ -1,0 +1,77 @@
+ Prompt for Replit AI – Production Tracking System for Uniform Manufacturing
+
+Build a complete web system (frontend + backend) to manage the production of uniform batches in a small factory. Focus on core functionality and clean UI — I need to save credits, so please avoid unnecessary code and comments.
+
+🛠 Tech stack suggestion:
+
+Frontend: React + Tailwind CSS
+
+Backend: Node.js + Express
+
+Use in-memory data or a simple db.json to simulate the database
+
+📁 Modules to include:
+
+Product Registration
+
+Fields: name, internal reference (code), technical description, main fabric (type + required meters per piece), list of notions (e.g., label, elastic, zipper, button — with quantity per unit), and optional notes (e.g., size variations).
+
+Production Batches
+
+Auto-generated batch code
+
+Related product
+
+Number of items
+
+Cut date
+
+Status: waiting, sent to internal production, sent to external workshop, returned (checked or with issues)
+
+Assigned workshop (if applicable)
+
+Dates: sent to production, expected return, actual return
+
+Conference result: OK, Problem (requires notes)
+
+Observations
+
+History of status changes (who updated and when)
+
+Image upload for the cut batch (e.g., photo of fabric stacks)
+
+Workshop Registration
+
+Name, person in charge, phone, address, service type (sewing, embroidery, finishing), optional estimated capacity
+
+Users & Access
+
+Username, role (admin, production supervisor, cutter), permission level (view, register, edit)
+
+📊 Main Dashboard
+
+Weekly calendar view (Sunday to Saturday)
+
+Each batch appears as a colored horizontal bar spanning from the cut date to return date
+
+Inside each bar: batch code + workshop name
+
+Color-coded by workshop
+
+Clicking on a batch opens a pop-up with all batch details + history
+
+📂 Filters:
+
+Filter by product, workshop, status, or date range
+
+📸 Additional features:
+
+Upload and view batch image (e.g. stacked cut fabric)
+
+Track batch movement history with user + timestamp
+
+Simple production report by period, product, or workshop
+
+🖼️ Note: I will upload an image that shows the desired dashboard layout for the weekly calendar view. Please follow that visual layout closely when building the dashboard UI.
+
+Include mock data: 2 products, 2 workshops, and 3 example batches with distinct statuses and dates to simulate full functionality.
