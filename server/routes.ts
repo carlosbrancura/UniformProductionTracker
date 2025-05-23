@@ -182,7 +182,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/batches", async (req, res) => {
     try {
-      // Simple data preparation without schema validation
+      // Create batch data with automatic code generation
+      const code = String(Math.floor(Math.random() * 900) + 100).padStart(3, '0');
+      
       const batchData = {
         productId: parseInt(req.body.productId),
         quantity: parseInt(req.body.quantity),
@@ -191,10 +193,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         workshopId: req.body.workshopId ? parseInt(req.body.workshopId) : null,
         expectedReturnDate: req.body.expectedReturnDate ? new Date(req.body.expectedReturnDate) : null,
         observations: req.body.observations || null,
-        sentToProductionDate: req.body.sentToProductionDate ? new Date(req.body.sentToProductionDate) : null,
-        actualReturnDate: req.body.actualReturnDate ? new Date(req.body.actualReturnDate) : null,
-        conferenceResult: req.body.conferenceResult || null,
-        imageUrl: req.body.imageUrl || null,
+        sentToProductionDate: null,
+        actualReturnDate: null,
+        conferenceResult: null,
+        imageUrl: null,
       };
       
       const batch = await storage.createBatch(batchData);
@@ -209,8 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(batch);
     } catch (error: any) {
-      console.error("Batch creation error:", error);
-      res.status(400).json({ message: "Failed to create batch", error: error.message });
+      res.status(400).json({ message: "Invalid batch data" });
     }
   });
 
