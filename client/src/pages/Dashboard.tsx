@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import BatchModal from "@/components/BatchModal";
 import BatchForm from "@/components/BatchForm";
+import BatchList from "@/components/BatchList";
 import type { Batch, Product, Workshop } from "@shared/schema";
 
 export default function Dashboard() {
@@ -139,6 +140,15 @@ export default function Dashboard() {
         workshops={workshops}
         onBatchClick={handleBatchClick}
       />
+
+      <div className="mt-8">
+        <BatchList
+          batches={batches || []}
+          products={products || []}
+          workshops={workshops || []}
+          onBatchClick={handleBatchClick}
+        />
+      </div>
 
       {selectedBatch && (
         <BatchModal

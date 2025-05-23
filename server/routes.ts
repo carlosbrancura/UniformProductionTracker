@@ -180,26 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/batches", async (req, res) => {
     try {
-      // Validate and clean the request data
-      const batchData = {
-        productId: parseInt(req.body.productId),
-        quantity: parseInt(req.body.quantity),
-        cutDate: new Date(req.body.cutDate),
-        status: req.body.status || "waiting",
-        workshopId: req.body.workshopId ? parseInt(req.body.workshopId) : null,
-        expectedReturnDate: req.body.expectedReturnDate ? new Date(req.body.expectedReturnDate) : null,
-        observations: req.body.observations || null,
-        sentToProductionDate: null,
-        actualReturnDate: null,
-        conferenceResult: null,
-        imageUrl: null,
-      };
-
-      // Validate required fields
-      if (!batchData.productId || !batchData.quantity || !batchData.cutDate || !batchData.status) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-
+      const batchData = insertBatchSchema.parse(req.body);
       const batch = await storage.createBatch(batchData);
       
       // Add initial history entry
@@ -237,8 +218,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json(batch);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid batch data" });
+    } catch (error: any) {
+      console.error("Batch update error:", error);
+      res.status(400).json({ message: "Failed to update batch", error: error.message });
     }
   });
 
