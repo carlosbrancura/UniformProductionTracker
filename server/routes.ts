@@ -182,8 +182,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/batches", async (req, res) => {
     try {
-      // Bypass schema validation and create batch directly
-      const batchData = {
+      // Manual validation without schema
+      if (!req.body.productId || !req.body.quantity || !req.body.cutDate) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Generate unique batch code
+      const code = String(Date.now()).slice(-3).padStart(3, '0');
+      
+      // Direct database insertion
+      const [batch] = await db.insert(batches).values({
+        code,
         productId: parseInt(req.body.productId),
         quantity: parseInt(req.body.quantity),
         cutDate: new Date(req.body.cutDate),
@@ -195,21 +204,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actualReturnDate: null,
         conferenceResult: null,
         imageUrl: null,
-      };
+      }).returning();
       
-      const batch = await storage.createBatch(batchData);
-      
-      await storage.addBatchHistory({
+      // Add history entry
+      await db.insert(batchHistory).values({
         batchId: batch.id,
         action: "Lote criado",
         userId: 1,
-        notes: null
+        notes: null,
+        timestamp: new Date()
       });
       
       res.status(201).json(batch);
     } catch (error: any) {
       console.error("Batch creation error:", error);
-      res.status(400).json({ message: "Failed to create batch", error: error.message });
+      res.status(500).json({ message: "Database error", error: error.message });
     }
   });
 
