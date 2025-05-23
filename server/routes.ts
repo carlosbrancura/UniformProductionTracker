@@ -180,7 +180,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/batches", async (req, res) => {
     try {
+      console.log("Received batch data:", req.body);
       const batchData = insertBatchSchema.parse(req.body);
+      console.log("Parsed batch data:", batchData);
       const batch = await storage.createBatch(batchData);
       
       // Add initial history entry
@@ -193,7 +195,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(batch);
     } catch (error) {
-      res.status(400).json({ message: "Invalid batch data" });
+      console.error("Batch creation error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ message: "Invalid batch data", error: error.message });
+      } else {
+        res.status(400).json({ message: "Invalid batch data" });
+      }
     }
   });
 
