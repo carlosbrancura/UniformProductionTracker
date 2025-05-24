@@ -291,20 +291,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { cutDate, status, workshopId, expectedReturnDate, observations, products } = req.body;
       
-      // Prepare batch data for update - filter out undefined values
-      const batchData: any = {
-        status: status || "waiting",
-        workshopId: workshopId && workshopId !== "internal" ? parseInt(workshopId) : null,
-        observations: observations || null,
-      };
+      // Prepare batch data for update - only include fields that are being changed
+      const batchData: any = {};
 
-      // Only add dates if they are provided and valid
+      if (status) {
+        batchData.status = status;
+      }
+      
+      if (workshopId !== undefined) {
+        batchData.workshopId = workshopId && workshopId !== "internal" ? parseInt(workshopId) : null;
+      }
+      
+      if (observations !== undefined) {
+        batchData.observations = observations || null;
+      }
+
       if (cutDate && cutDate !== "") {
-        batchData.cutDate = new Date(cutDate);
+        try {
+          batchData.cutDate = new Date(cutDate + "T00:00:00.000Z");
+        } catch (e) {
+          console.log("Invalid cutDate:", cutDate);
+        }
       }
       
       if (expectedReturnDate && expectedReturnDate !== "") {
-        batchData.expectedReturnDate = new Date(expectedReturnDate);
+        try {
+          batchData.expectedReturnDate = new Date(expectedReturnDate + "T00:00:00.000Z");
+        } catch (e) {
+          console.log("Invalid expectedReturnDate:", expectedReturnDate);
+        }
       }
 
       console.log('Updating batch with data:', batchData);
@@ -314,24 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Batch not found" });
       }
 
-      // Update batch products if provided
-      if (products && products.length > 0) {
-        // Delete existing batch products
-        await db.delete(batchProducts).where(eq(batchProducts.batchId, id));
-        
-        // Create new batch products
-        for (const product of products) {
-          if (product.productId && product.quantity) {
-            await db.insert(batchProducts).values({
-              batchId: id,
-              productId: parseInt(product.productId),
-              quantity: parseInt(product.quantity),
-              selectedColor: product.selectedColor || null,
-              selectedSize: product.selectedSize || null,
-            });
-          }
-        }
-      }
+      // Products are not editable - to change products, delete and recreate the batch
       
       // Add history entry
       await storage.addBatchHistory({
@@ -352,13 +350,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/batches/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Delete batch products first
+      await db.delete(batchProducts).where(eq(batchProducts.batchId, id));
+      
+      // Delete batch history
+      await db.delete(batchHistory).where(eq(batchHistory.batchId, id));
+      
+      // Delete the batch
       const deleted = await storage.deleteBatch(id);
       if (!deleted) {
         return res.status(404).json({ message: "Batch not found" });
       }
+      
+      console.log(`Batch ${id} deleted successfully`);
       res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete batch" });
+    } catch (error: any) {
+      console.error("Batch deletion error:", error);
+      res.status(500).json({ message: "Failed to delete batch", error: error.message });
     }
   });
 

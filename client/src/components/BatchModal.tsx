@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Camera, Edit, Save, Trash2, Plus } from "lucide-react";
+import { X, Camera, Edit, Save, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Batch, Product, Workshop, BatchHistory, User } from "@shared/schema";
 
@@ -27,17 +27,16 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
   const [isEditing, setIsEditing] = useState(false);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
 
-  // Form state for editing
+  // Simple form state for editing basic fields only
   const [editData, setEditData] = useState({
     cutDate: batch.cutDate ? format(new Date(batch.cutDate), "yyyy-MM-dd") : "",
     status: batch.status || "waiting",
     workshopId: batch.workshopId ? batch.workshopId.toString() : "internal",
     expectedReturnDate: batch.expectedReturnDate ? format(new Date(batch.expectedReturnDate), "yyyy-MM-dd") : "",
     observations: batch.observations || "",
-    products: [{ productId: "", quantity: 1, selectedColor: "", selectedSize: "" }],
   });
 
-  // Query to get batch products
+  // Query to get batch products for display only
   const { data: batchProducts = [] } = useQuery({
     queryKey: ['/api/batch-products', batch.id],
     queryFn: async () => {
@@ -45,19 +44,6 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
       return response.json();
     },
   });
-
-  // Load batch products when data is available
-  useEffect(() => {
-    if (batchProducts.length > 0) {
-      const formattedProducts = batchProducts.map((bp: any) => ({
-        productId: bp.productId.toString(),
-        quantity: bp.quantity,
-        selectedColor: bp.selectedColor || "",
-        selectedSize: bp.selectedSize || "",
-      }));
-      setEditData(prev => ({ ...prev, products: formattedProducts }));
-    }
-  }, [batchProducts]);
 
   const { data: history = [] } = useQuery<BatchHistory[]>({
     queryKey: ["/api/batches", batch.id, "history"],
@@ -99,7 +85,8 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
         headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) {
-        throw new Error(`Failed to update batch: ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to update batch: ${response.statusText}`);
       }
       return response.json();
     },
@@ -122,7 +109,10 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
       const response = await fetch(`/api/batches/${batch.id}`, {
         method: "DELETE",
       });
-      return response.json();
+      if (!response.ok) {
+        throw new Error(`Failed to delete batch: ${response.statusText}`);
+      }
+      return response;
     },
     onSuccess: () => {
       toast({ title: "Lote excluído com sucesso!" });
@@ -149,37 +139,9 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
   };
 
   const handleDelete = () => {
-    if (confirm("Tem certeza que deseja excluir este lote?")) {
+    if (confirm("Tem certeza que deseja excluir este lote? Esta ação não pode ser desfeita.")) {
       deleteMutation.mutate();
     }
-  };
-
-  const addProduct = () => {
-    setEditData(prev => ({
-      ...prev,
-      products: [...prev.products, { productId: "", quantity: 1, selectedColor: "", selectedSize: "" }]
-    }));
-  };
-
-  const removeProduct = (index: number) => {
-    setEditData(prev => ({
-      ...prev,
-      products: prev.products.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateProduct = (index: number, field: string, value: any) => {
-    setEditData(prev => ({
-      ...prev,
-      products: prev.products.map((product, i) => 
-        i === index ? { ...product, [field]: value } : product
-      )
-    }));
-  };
-
-  const getSelectedProduct = (productId: string) => {
-    if (!productId) return null;
-    return products.find(p => p.id.toString() === productId) || null;
   };
 
   const getStatusColor = (status: string) => {
@@ -223,7 +185,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl font-bold text-slate-900">
@@ -245,9 +207,10 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
                 size="sm"
                 onClick={handleDelete}
                 className="text-red-600 hover:text-red-700"
+                disabled={deleteMutation.isPending}
               >
                 <Trash2 className="h-4 w-4 mr-1" />
-                Excluir
+                {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
               </Button>
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-4 w-4" />
@@ -258,9 +221,8 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
 
         <div className="space-y-6">
           {isEditing ? (
-            /* EDITING MODE */
+            /* EDITING MODE - BASIC FIELDS ONLY */
             <div className="space-y-6">
-              {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Data de Corte</Label>
@@ -323,129 +285,10 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
                 />
               </div>
 
-              {/* Products Section */}
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <Label className="text-lg font-semibold">Produtos do Lote</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addProduct}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Adicionar Produto
-                  </Button>
-                </div>
-
-                <div className="space-y-4">
-                  {editData.products.map((product, index) => {
-                    const selectedProduct = getSelectedProduct(product.productId);
-                    
-                    return (
-                      <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                        <div className="flex justify-between items-start mb-4">
-                          <h4 className="font-medium">Produto {index + 1}</h4>
-                          {editData.products.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeProduct(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label>Produto</Label>
-                            <Select 
-                              onValueChange={(value) => {
-                                updateProduct(index, 'productId', value);
-                                updateProduct(index, 'selectedColor', '');
-                                updateProduct(index, 'selectedSize', '');
-                              }}
-                              value={product.productId}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione o produto" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {products.map((prod) => (
-                                  <SelectItem key={prod.id} value={prod.id.toString()}>
-                                    {prod.name} - {prod.code}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div>
-                            <Label>Quantidade</Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={product.quantity}
-                              onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value))}
-                            />
-                          </div>
-                        </div>
-
-                        {selectedProduct && (
-                          <div className="grid grid-cols-2 gap-4 mt-4">
-                            <div>
-                              <Label>Cor</Label>
-                              <Select 
-                                onValueChange={(value) => updateProduct(index, 'selectedColor', value)} 
-                                value={product.selectedColor}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione a cor" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {selectedProduct.availableColors?.map((color, colorIndex) => (
-                                    <SelectItem key={colorIndex} value={color}>
-                                      {color}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div>
-                              <Label>Tamanho</Label>
-                              <Select 
-                                onValueChange={(value) => updateProduct(index, 'selectedSize', value)} 
-                                value={product.selectedSize}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione o tamanho" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {selectedProduct.availableSizes?.map((size, sizeIndex) => (
-                                    <SelectItem key={sizeIndex} value={size}>
-                                      {size}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        )}
-
-                        {selectedProduct && (
-                          <div className="mt-4 p-3 bg-blue-50 rounded">
-                            <p className="text-sm text-blue-800">
-                              <strong>Valor de Produção:</strong> R$ {selectedProduct.productionValue || "0,00"}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Nota:</strong> Para alterar os produtos do lote, exclua este lote e crie um novo com os produtos corretos.
+                </p>
               </div>
 
               <div className="flex gap-2 pt-4">
@@ -500,7 +343,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
                   )}
                 </div>
 
-                {/* Products List */}
+                {/* Products List - Read Only */}
                 <div className="mt-6">
                   <h4 className="text-md font-semibold text-slate-900 mb-3">Produtos</h4>
                   <div className="space-y-2">
