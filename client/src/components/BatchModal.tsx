@@ -67,13 +67,11 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
 
   const markReturnedMutation = useMutation({
     mutationFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
       const response = await fetch(`/api/batches/${batch.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: "returned",
-          actualReturnDate: today
+          status: "returned"
         }),
       });
       if (!response.ok) {

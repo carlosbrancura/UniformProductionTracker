@@ -284,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Batch update with return date
+  // Batch update with SQL approach for dates
   app.put("/api/batches/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -292,36 +292,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('Batch update:', { id, status, workshopId, observations, actualReturnDate });
       
-      const updateData: any = {};
-      
+      // Build SQL manually to avoid date conversion issues
+      const updateFields = [];
+      const params = [id];
+      let paramIndex = 2;
+
       if (status) {
-        updateData.status = status;
+        updateFields.push(`status = $${paramIndex}`);
+        params.push(status);
+        paramIndex++;
       }
       
       if (workshopId !== undefined) {
-        updateData.workshopId = workshopId;
+        updateFields.push(`workshop_id = $${paramIndex}`);
+        params.push(workshopId);
+        paramIndex++;
       }
       
       if (observations !== undefined) {
-        updateData.observations = observations;
+        updateFields.push(`observations = $${paramIndex}`);
+        params.push(observations);
+        paramIndex++;
       }
       
       if (actualReturnDate && actualReturnDate !== "") {
-        updateData.actualReturnDate = new Date(actualReturnDate);
+        updateFields.push(`actual_return_date = $${paramIndex}`);
+        params.push(actualReturnDate);
+        paramIndex++;
       }
 
-      const [updatedBatch] = await db
-        .update(batches)
-        .set(updateData)
-        .where(eq(batches.id, id))
-        .returning();
+      if (updateFields.length === 0) {
+        return res.status(400).json({ message: "No fields to update" });
+      }
+
+      const sql = `
+        UPDATE batches 
+        SET ${updateFields.join(', ')} 
+        WHERE id = $1 
+        RETURNING *
+      `;
+
+      console.log('SQL:', sql);
+      console.log('Params:', params);
+
+      const result = await pool.query(sql, params);
       
-      if (!updatedBatch) {
+      if (result.rows.length === 0) {
         return res.status(404).json({ message: "Batch not found" });
       }
       
       console.log('Batch updated successfully');
-      res.json(updatedBatch);
+      res.json(result.rows[0]);
     } catch (error: any) {
       console.error("Batch update error:", error);
       res.status(500).json({ message: "Failed to update batch", error: error.message });
