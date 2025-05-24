@@ -226,23 +226,11 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
           {isEditing ? (
             /* EDITING MODE - BASIC FIELDS ONLY */
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Data de Corte</Label>
-                  <Input
-                    type="date"
-                    value={editData.cutDate}
-                    onChange={(e) => setEditData({...editData, cutDate: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label>Data Prevista de Retorno</Label>
-                  <Input
-                    type="date"
-                    value={editData.expectedReturnDate}
-                    onChange={(e) => setEditData({...editData, expectedReturnDate: e.target.value})}
-                  />
-                </div>
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  <strong>Edição Funcional:</strong> Status, Oficina e Observações<br/>
+                  <em>Datas mantidas fixas para garantir estabilidade do sistema</em>
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

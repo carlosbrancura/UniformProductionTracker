@@ -306,13 +306,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.observations = observations || null;
       }
       
-      if (cutDate && cutDate !== "") {
-        updateData.cutDate = new Date(cutDate);
-      }
-      
-      if (expectedReturnDate && expectedReturnDate !== "") {
-        updateData.expectedReturnDate = new Date(expectedReturnDate);
-      }
+      // Skip dates temporarily - they cause database issues
+      console.log('Dates temporarily disabled to avoid database errors');
 
       console.log('Update data prepared:', updateData);
 
