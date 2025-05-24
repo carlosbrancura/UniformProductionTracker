@@ -93,7 +93,10 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
     onSuccess: () => {
       toast({ title: "Lote atualizado com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/batch-products', batch.id] });
+      queryClient.refetchQueries({ queryKey: ["/api/batches"] });
       setIsEditing(false);
+      onClose(); // Close modal to see updated data
     },
     onError: (error: any) => {
       toast({
@@ -135,8 +138,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
   };
 
   const handleUpdate = () => {
-    // Send only status for now
-    updateMutation.mutate({ status: editData.status });
+    updateMutation.mutate(editData);
   };
 
   const handleDelete = () => {
@@ -224,11 +226,23 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
           {isEditing ? (
             /* EDITING MODE - BASIC FIELDS ONLY */
             <div className="space-y-6">
-              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                <p className="text-sm text-yellow-800">
-                  <strong>Edição de Datas Temporariamente Desabilitada</strong><br/>
-                  Use apenas os campos abaixo para testar a funcionalidade básica.
-                </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Data de Corte</Label>
+                  <Input
+                    type="date"
+                    value={editData.cutDate}
+                    onChange={(e) => setEditData({...editData, cutDate: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Data Prevista de Retorno</Label>
+                  <Input
+                    type="date"
+                    value={editData.expectedReturnDate}
+                    onChange={(e) => setEditData({...editData, expectedReturnDate: e.target.value})}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

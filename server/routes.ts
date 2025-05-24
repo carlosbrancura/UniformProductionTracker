@@ -284,21 +284,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple batch update - status only
+  // Complete batch update with all fields
   app.put("/api/batches/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { status } = req.body;
+      const { cutDate, status, workshopId, expectedReturnDate, observations } = req.body;
       
-      console.log('Simple batch update - ID:', id, 'Status:', status);
+      console.log('Batch update - ID:', id, 'Data:', { cutDate, status, workshopId, expectedReturnDate, observations });
       
-      if (!status) {
-        return res.status(400).json({ message: "Status is required" });
+      const updateData: any = {};
+      
+      if (status) {
+        updateData.status = status;
       }
+      
+      if (workshopId !== undefined) {
+        updateData.workshopId = workshopId && workshopId !== "internal" ? parseInt(workshopId) : null;
+      }
+      
+      if (observations !== undefined) {
+        updateData.observations = observations || null;
+      }
+      
+      if (cutDate && cutDate !== "") {
+        updateData.cutDate = new Date(cutDate);
+      }
+      
+      if (expectedReturnDate && expectedReturnDate !== "") {
+        updateData.expectedReturnDate = new Date(expectedReturnDate);
+      }
+
+      console.log('Update data prepared:', updateData);
 
       const [updatedBatch] = await db
         .update(batches)
-        .set({ status })
+        .set(updateData)
         .where(eq(batches.id, id))
         .returning();
       
@@ -306,7 +326,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Batch not found" });
       }
       
-      console.log('Batch status updated successfully:', updatedBatch);
+      // Add history entry
+      await storage.addBatchHistory({
+        batchId: updatedBatch.id,
+        action: "Lote atualizado",
+        userId: 1,
+        notes: observations || null
+      });
+      
+      console.log('Batch updated successfully:', updatedBatch);
       res.json(updatedBatch);
     } catch (error: any) {
       console.error("Batch update error:", error);
