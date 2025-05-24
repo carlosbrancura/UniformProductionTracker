@@ -68,7 +68,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
   const markReturnedMutation = useMutation({
     mutationFn: async () => {
       const newStatus = batch.status === "returned" ? "waiting" : "returned";
-      const response = await fetch(`/api/batches/${batch.id}`, {
+      const response = await fetch(`/api/batches/${batch.id}/simple`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
