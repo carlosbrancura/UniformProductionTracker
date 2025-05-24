@@ -38,6 +38,11 @@ export default function BatchList({ batches, products, workshops, onBatchClick }
   const [statusFilter, setStatusFilter] = useState("");
 
   const filteredBatches = batches.filter(batch => {
+    // Hide returned batches from the list
+    if (batch.status === "returned") {
+      return false;
+    }
+    
     const dateMatch = !dateFilter || formatDate(batch.cutDate).includes(dateFilter);
     const workshopMatch = !workshopFilter || workshopFilter === "all" || 
       (workshopFilter === "internal" && !batch.workshopId) || 

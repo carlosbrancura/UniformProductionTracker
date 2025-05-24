@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { X, Camera, Edit, RotateCcw, Save } from "lucide-react";
+import { X, Camera, Edit, RotateCcw, Save, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -95,6 +95,27 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
     updateBatchMutation.mutate(data);
   };
 
+  const deleteBatchMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('DELETE', `/api/batches/${batch.id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Lote excluído com sucesso!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
+      onClose();
+    },
+    onError: () => {
+      toast({ title: "Erro ao excluir lote", variant: "destructive" });
+    },
+  });
+
+  const handleDelete = () => {
+    if (window.confirm("Tem certeza que deseja excluir este lote? Esta ação não pode ser desfeita.")) {
+      deleteBatchMutation.mutate();
+    }
+  };
+
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
       const response = await apiRequest('PUT', `/api/batches/${batch.id}`, { status });
@@ -156,10 +177,22 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
             </div>
             <div className="flex items-center space-x-2">
               {!isEditing ? (
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar
-                </Button>
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleDelete}
+                    disabled={deleteBatchMutation.isPending}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </Button>
+                </>
               ) : (
                 <div className="flex space-x-2">
                   <Button 

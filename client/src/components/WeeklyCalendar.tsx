@@ -156,6 +156,11 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
   };
 
   const visibleBatches = batches.filter(batch => {
+    // Hide returned batches from the calendar
+    if (batch.status === "returned") {
+      return false;
+    }
+    
     const cutDate = new Date(batch.cutDate);
     const expectedReturn = batch.expectedReturnDate ? new Date(batch.expectedReturnDate) : cutDate;
     
