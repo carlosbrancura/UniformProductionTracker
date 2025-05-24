@@ -111,14 +111,7 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
               )}
             </div>
 
-            <div>
-              <Label htmlFor="expectedReturnDate">Data Prevista de Retorno</Label>
-              <Input
-                id="expectedReturnDate"
-                type="date"
-                {...form.register("expectedReturnDate")}
-              />
-            </div>
+
           </div>
 
           <div className="grid grid-cols-2 gap-4">
