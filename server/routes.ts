@@ -311,16 +311,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Adding observations:', batchData.observations);
       }
 
-      // Handle dates by only including them if they are valid strings
-      if (cutDate && cutDate !== "" && cutDate !== null) {
-        console.log('Processing cutDate:', cutDate, typeof cutDate);
-        batchData.cutDate = cutDate; // Let Drizzle handle the conversion
-      }
-      
-      if (expectedReturnDate && expectedReturnDate !== "" && expectedReturnDate !== null) {
-        console.log('Processing expectedReturnDate:', expectedReturnDate, typeof expectedReturnDate);
-        batchData.expectedReturnDate = expectedReturnDate; // Let Drizzle handle the conversion
-      }
+      // Skip dates for now to isolate the problem
+      console.log('Skipping dates temporarily to test other fields');
 
       console.log('Final batch data for update:', batchData);
       
