@@ -68,7 +68,7 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
         availableSizes: sizes.filter(s => s.trim()),
       };
       
-      const url = isEditing ? `/api/products/${product!.id}` : '/api/products';
+      const url = isEditing ? `/api/products/${product!.id}` : '/api/products-new';
       const method = isEditing ? 'PUT' : 'POST';
       const response = await apiRequest(method, url, productData);
       return response.json();
