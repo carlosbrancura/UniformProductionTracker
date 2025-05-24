@@ -15,9 +15,9 @@ export default function Dashboard() {
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
   const [showBatchForm, setShowBatchForm] = useState(false);
   const [filters, setFilters] = useState({
-    product: "",
-    workshop: "",
-    status: "",
+    product: "all",
+    workshop: "all", 
+    status: "all",
     dateStart: "",
   });
 

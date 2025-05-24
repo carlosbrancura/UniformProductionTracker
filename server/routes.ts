@@ -66,35 +66,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Products routes
   app.get("/api/products", async (req, res) => {
     try {
+      console.log('Fetching products...');
       const products = await storage.getAllProducts();
+      console.log('Products found:', products.length);
       res.json(products);
     } catch (error) {
       console.error('Products fetch error:', error);
-      res.status(500).json({ message: "Failed to fetch products" });
+      res.status(500).json({ message: "Failed to fetch products", error: error.message });
     }
   });
 
   app.post("/api/products", async (req, res) => {
     try {
-      // Temporary validation bypass for new fields
+      console.log('Received product data:', JSON.stringify(req.body, null, 2));
+      
+      // Validate required fields
+      if (!req.body.name || !req.body.code || !req.body.fabricType || !req.body.fabricMetersPerPiece) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
       const productData = {
-        name: req.body.name,
-        code: req.body.code,
-        description: req.body.description,
-        fabricType: req.body.fabricType,
-        fabricMetersPerPiece: req.body.fabricMetersPerPiece,
-        notions: req.body.notions,
-        notes: req.body.notes,
-        availableColors: req.body.availableColors || [],
-        availableSizes: req.body.availableSizes || [],
+        name: req.body.name.trim(),
+        code: req.body.code.trim(),
+        description: req.body.description || '',
+        fabricType: req.body.fabricType.trim(),
+        fabricMetersPerPiece: req.body.fabricMetersPerPiece.trim(),
+        notions: Array.isArray(req.body.notions) ? req.body.notions : [],
+        notes: req.body.notes || '',
+        availableColors: Array.isArray(req.body.availableColors) ? req.body.availableColors : [],
+        availableSizes: Array.isArray(req.body.availableSizes) ? req.body.availableSizes : [],
         productionValue: req.body.productionValue || '0'
       };
+      
+      console.log('Processed product data:', JSON.stringify(productData, null, 2));
       
       const product = await storage.createProduct(productData);
       res.status(201).json(product);
     } catch (error) {
       console.error('Product creation error:', error);
-      res.status(400).json({ message: "Invalid product data" });
+      res.status(400).json({ message: "Invalid product data", error: error.message });
     }
   });
 
