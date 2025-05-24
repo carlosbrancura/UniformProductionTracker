@@ -289,40 +289,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       console.log('Batch update request:', req.body);
       
-      const { cutDate, status, workshopId, expectedReturnDate, observations, products } = req.body;
+      const { cutDate, status, workshopId, expectedReturnDate, observations } = req.body;
+      
+      console.log('Raw request data:', { cutDate, status, workshopId, expectedReturnDate, observations });
       
       // Prepare batch data for update - only include fields that are being changed
       const batchData: any = {};
 
       if (status) {
         batchData.status = status;
+        console.log('Adding status:', status);
       }
       
       if (workshopId !== undefined) {
         batchData.workshopId = workshopId && workshopId !== "internal" ? parseInt(workshopId) : null;
+        console.log('Adding workshopId:', batchData.workshopId);
       }
       
       if (observations !== undefined) {
         batchData.observations = observations || null;
+        console.log('Adding observations:', batchData.observations);
       }
 
-      if (cutDate && cutDate !== "") {
+      // Handle dates more carefully
+      if (cutDate && cutDate !== "" && cutDate !== null) {
+        console.log('Processing cutDate:', cutDate, typeof cutDate);
         try {
-          batchData.cutDate = new Date(cutDate + "T00:00:00.000Z");
+          // Try parsing as ISO string first
+          const dateObj = new Date(cutDate);
+          if (!isNaN(dateObj.getTime())) {
+            batchData.cutDate = dateObj;
+            console.log('Successfully parsed cutDate:', batchData.cutDate);
+          } else {
+            console.log('Invalid cutDate, skipping');
+          }
         } catch (e) {
-          console.log("Invalid cutDate:", cutDate);
+          console.log('Error parsing cutDate:', e);
         }
       }
       
-      if (expectedReturnDate && expectedReturnDate !== "") {
+      if (expectedReturnDate && expectedReturnDate !== "" && expectedReturnDate !== null) {
+        console.log('Processing expectedReturnDate:', expectedReturnDate, typeof expectedReturnDate);
         try {
-          batchData.expectedReturnDate = new Date(expectedReturnDate + "T00:00:00.000Z");
+          const dateObj = new Date(expectedReturnDate);
+          if (!isNaN(dateObj.getTime())) {
+            batchData.expectedReturnDate = dateObj;
+            console.log('Successfully parsed expectedReturnDate:', batchData.expectedReturnDate);
+          } else {
+            console.log('Invalid expectedReturnDate, skipping');
+          }
         } catch (e) {
-          console.log("Invalid expectedReturnDate:", expectedReturnDate);
+          console.log('Error parsing expectedReturnDate:', e);
         }
       }
 
-      console.log('Updating batch with data:', batchData);
+      console.log('Final batch data for update:', batchData);
       
       const batch = await storage.updateBatch(id, batchData);
       if (!batch) {
