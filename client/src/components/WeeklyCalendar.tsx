@@ -13,19 +13,19 @@ interface WeeklyCalendarProps {
 }
 
 export default function WeeklyCalendar({ batches, products, workshops, onBatchClick }: WeeklyCalendarProps) {
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date());
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
 
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Show 7 days starting from current date
+  const viewDays = Array.from({ length: 7 }, (_, i) => addDays(currentDate, i));
 
-  const previousWeek = () => setCurrentWeek(subWeeks(currentWeek, 1));
-  const nextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1));
-  const previousDay = () => setCurrentWeek(addDays(currentWeek, -1));
-  const nextDay = () => setCurrentWeek(addDays(currentWeek, 1));
+  const previousWeek = () => setCurrentDate(subWeeks(currentDate, 1));
+  const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
+  const previousDay = () => setCurrentDate(addDays(currentDate, -1));
+  const nextDay = () => setCurrentDate(addDays(currentDate, 1));
 
   // Touch/Mouse scroll handlers for smooth daily navigation
   const handleStart = (clientX: number) => {
@@ -135,8 +135,8 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
     const cutDate = new Date(batch.cutDate);
     const expectedReturn = batch.expectedReturnDate ? new Date(batch.expectedReturnDate) : cutDate;
     
-    const startCol = differenceInDays(cutDate, weekStart);
-    const endCol = differenceInDays(expectedReturn, weekStart);
+    const startCol = differenceInDays(cutDate, currentDate);
+    const endCol = differenceInDays(expectedReturn, currentDate);
     
     // Check if batch is visible in this week
     if (endCol < 0 || startCol > 6) return null;
@@ -153,8 +153,17 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
   };
 
   const visibleBatches = batches.filter(batch => {
-    const position = getBatchPosition(batch);
-    return position && position.visible;
+    const cutDate = new Date(batch.cutDate);
+    const expectedReturn = batch.expectedReturnDate ? new Date(batch.expectedReturnDate) : cutDate;
+    
+    return viewDays.some(day => 
+      isWithinInterval(day, { start: cutDate, end: expectedReturn })
+    );
+  }).sort((a, b) => {
+    // Sort by expected return date - newest deadlines first (top), older deadlines last (bottom)
+    const aReturn = a.expectedReturnDate ? new Date(a.expectedReturnDate) : new Date(a.cutDate);
+    const bReturn = b.expectedReturnDate ? new Date(b.expectedReturnDate) : new Date(b.cutDate);
+    return bReturn.getTime() - aReturn.getTime();
   });
 
   const dayNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -169,7 +178,7 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm font-medium text-slate-700 px-4">
-              {format(weekStart, "dd/MM/yyyy", { locale: ptBR })} - {format(addDays(weekStart, 6), "dd/MM/yyyy", { locale: ptBR })}
+              {format(currentDate, "dd/MM/yyyy", { locale: ptBR })} - {format(addDays(currentDate, 6), "dd/MM/yyyy", { locale: ptBR })}
             </span>
             <Button variant="outline" size="sm" onClick={nextWeek}>
               <ChevronRight className="h-4 w-4" />
@@ -195,10 +204,10 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
         >
           {/* Calendar Header */}
           <div className="grid grid-cols-7 gap-1 mb-4">
-            {weekDays.map((day, index) => (
+            {viewDays.map((day, index) => (
               <div key={day.toString()} className="bg-slate-50 p-3 text-center rounded-md">
                 <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">
-                  {dayNames[index]}
+                  {dayNames[index % 7]}
                 </div>
                 <div className="text-lg font-semibold text-slate-900 mt-1">
                   {format(day, "dd")}
