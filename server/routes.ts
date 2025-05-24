@@ -64,11 +64,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Products routes - Using new service
+  // Products routes - Fixed version
   app.get("/api/products", async (req, res) => {
     try {
-      const products = await productsService.getAllProducts();
-      res.json(products);
+      const result = await pool.query('SELECT * FROM products ORDER BY id DESC');
+      res.json(result.rows);
     } catch (error: any) {
       console.error('Products fetch error:', error.message);
       res.status(500).json({ message: "Failed to fetch products" });
@@ -76,15 +76,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/products", async (req, res) => {
-    console.log('=== PRODUCT ROUTE HIT ===');
-    console.log('Body received:', req.body);
-    console.log('Headers:', req.headers);
-    
-    res.status(201).json({ 
-      message: "Product creation route working",
-      receivedData: req.body,
-      timestamp: new Date().toISOString()
-    });
+    try {
+      const productData = req.body;
+      
+      const result = await pool.query(`
+        INSERT INTO products (
+          name, code, description, fabric_type, fabric_meters_per_piece,
+          notions, notes, available_colors, available_sizes, production_value
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *
+      `, [
+        productData.name || '',
+        productData.code || `PROD_${Date.now()}`,
+        productData.description || null,
+        productData.fabricType || '',
+        productData.fabricMetersPerPiece || '0',
+        JSON.stringify(productData.notions || []),
+        productData.notes || null,
+        JSON.stringify(productData.availableColors || []),
+        JSON.stringify(productData.availableSizes || []),
+        productData.productionValue || '0'
+      ]);
+
+      res.status(201).json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Product creation error:', error);
+      res.status(500).json({ message: "Failed to create product", error: error.message });
+    }
   });
 
   app.put("/api/products/:id", async (req, res) => {
