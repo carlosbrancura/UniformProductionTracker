@@ -76,14 +76,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/products", async (req, res) => {
-    try {
-      console.log('Creating product via service:', req.body);
-      const product = await productsService.createProduct(req.body);
-      res.status(201).json(product);
-    } catch (error: any) {
-      console.error('Product creation error:', error.message);
-      res.status(400).json({ message: "Failed to create product", error: error.message });
-    }
+    console.log('=== PRODUCT ROUTE HIT ===');
+    console.log('Body received:', req.body);
+    console.log('Headers:', req.headers);
+    
+    res.status(201).json({ 
+      message: "Product creation route working",
+      receivedData: req.body,
+      timestamp: new Date().toISOString()
+    });
   });
 
   app.put("/api/products/:id", async (req, res) => {

@@ -10,9 +10,8 @@ export class ProductsService {
           id, name, code, description, 
           fabric_type as "fabricType",
           fabric_meters_per_piece as "fabricMetersPerPiece",
-          notions::text, notes,
-          available_colors::text as "availableColors",
-          available_sizes::text as "availableSizes",
+          notions, notes, available_colors as "availableColors",
+          available_sizes as "availableSizes",
           production_value as "productionValue"
         FROM products 
         ORDER BY id DESC
@@ -20,9 +19,9 @@ export class ProductsService {
       
       return result.rows.map(row => ({
         ...row,
-        notions: row.notions ? JSON.parse(row.notions) : [],
-        availableColors: row.availableColors ? JSON.parse(row.availableColors) : [],
-        availableSizes: row.availableSizes ? JSON.parse(row.availableSizes) : []
+        notions: Array.isArray(row.notions) ? row.notions : [],
+        availableColors: Array.isArray(row.availableColors) ? row.availableColors : [],
+        availableSizes: Array.isArray(row.availableSizes) ? row.availableSizes : []
       }));
     } catch (error: any) {
       console.error('Error fetching products:', error.message);
@@ -34,6 +33,11 @@ export class ProductsService {
     try {
       console.log('ProductsService: Creating product with data:', productData);
       
+      // Garantir que cores e tamanhos sejam arrays válidos
+      const colors = Array.isArray(productData.availableColors) ? productData.availableColors : [];
+      const sizes = Array.isArray(productData.availableSizes) ? productData.availableSizes : [];
+      const notions = Array.isArray(productData.notions) ? productData.notions : [];
+      
       const result = await pool.query(`
         INSERT INTO products (
           name, code, description, fabric_type, fabric_meters_per_piece,
@@ -43,9 +47,8 @@ export class ProductsService {
           id, name, code, description,
           fabric_type as "fabricType",
           fabric_meters_per_piece as "fabricMetersPerPiece",
-          notions::text, notes,
-          available_colors::text as "availableColors", 
-          available_sizes::text as "availableSizes",
+          notions, notes, available_colors as "availableColors", 
+          available_sizes as "availableSizes",
           production_value as "productionValue"
       `, [
         productData.name || '',
@@ -53,10 +56,10 @@ export class ProductsService {
         productData.description || null,
         productData.fabricType || '',
         productData.fabricMetersPerPiece || '0',
-        JSON.stringify(productData.notions || []),
+        JSON.stringify(notions),
         productData.notes || null,
-        JSON.stringify(productData.availableColors || []),
-        JSON.stringify(productData.availableSizes || []),
+        JSON.stringify(colors),
+        JSON.stringify(sizes),
         productData.productionValue || '0'
       ]);
 
