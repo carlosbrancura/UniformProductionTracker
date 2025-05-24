@@ -284,13 +284,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Complete batch update with all fields
+  // Simple batch update - only essential fields
   app.put("/api/batches/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { cutDate, status, workshopId, expectedReturnDate, observations } = req.body;
+      const { status, workshopId, observations } = req.body;
       
-      console.log('Batch update - ID:', id, 'Data:', { cutDate, status, workshopId, expectedReturnDate, observations });
+      console.log('Simple batch update:', { id, status, workshopId, observations });
       
       const updateData: any = {};
       
@@ -299,17 +299,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (workshopId !== undefined) {
-        updateData.workshopId = workshopId && workshopId !== "internal" ? parseInt(workshopId) : null;
+        updateData.workshopId = workshopId;
       }
       
       if (observations !== undefined) {
-        updateData.observations = observations || null;
+        updateData.observations = observations;
       }
-      
-      // Skip dates temporarily - they cause database issues
-      console.log('Dates temporarily disabled to avoid database errors');
-
-      console.log('Update data prepared:', updateData);
 
       const [updatedBatch] = await db
         .update(batches)
@@ -321,15 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Batch not found" });
       }
       
-      // Add history entry
-      await storage.addBatchHistory({
-        batchId: updatedBatch.id,
-        action: "Lote atualizado",
-        userId: 1,
-        notes: observations || null
-      });
-      
-      console.log('Batch updated successfully:', updatedBatch);
+      console.log('Batch updated successfully');
       res.json(updatedBatch);
     } catch (error: any) {
       console.error("Batch update error:", error);
