@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, json, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -19,6 +19,9 @@ export const products = pgTable("products", {
   fabricMetersPerPiece: text("fabric_meters_per_piece").notNull(),
   notions: json("notions").$type<Array<{ name: string; quantity: string }>>().notNull(),
   notes: text("notes"),
+  color: text("color"),
+  size: text("size"),
+  productionValue: decimal("production_value", { precision: 10, scale: 2 })
 });
 
 export const workshops = pgTable("workshops", {
@@ -35,8 +38,6 @@ export const workshops = pgTable("workshops", {
 export const batches = pgTable("batches", {
   id: serial("id").primaryKey(),
   code: text("code").notNull().unique(),
-  productId: integer("product_id").notNull(),
-  quantity: integer("quantity").notNull(),
   cutDate: timestamp("cut_date").notNull(),
   status: text("status").notNull(), // waiting, internal_production, external_workshop, returned_ok, returned_issues
   workshopId: integer("workshop_id"),
@@ -46,6 +47,13 @@ export const batches = pgTable("batches", {
   conferenceResult: text("conference_result"), // ok, problem
   observations: text("observations"),
   imageUrl: text("image_url"),
+});
+
+export const batchProducts = pgTable("batch_products", {
+  id: serial("id").primaryKey(),
+  batchId: integer("batch_id").notNull(),
+  productId: integer("product_id").notNull(),
+  quantity: integer("quantity").notNull()
 });
 
 export const batchHistory = pgTable("batch_history", {
@@ -61,6 +69,7 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertProductSchema = createInsertSchema(products).omit({ id: true });
 export const insertWorkshopSchema = createInsertSchema(workshops).omit({ id: true });
 export const insertBatchSchema = createInsertSchema(batches).omit({ id: true, code: true });
+export const insertBatchProductSchema = createInsertSchema(batchProducts).omit({ id: true });
 export const insertBatchHistorySchema = createInsertSchema(batchHistory).omit({ id: true, timestamp: true });
 
 export type User = typeof users.$inferSelect;
@@ -71,5 +80,7 @@ export type Workshop = typeof workshops.$inferSelect;
 export type InsertWorkshop = z.infer<typeof insertWorkshopSchema>;
 export type Batch = typeof batches.$inferSelect;
 export type InsertBatch = z.infer<typeof insertBatchSchema>;
+export type BatchProduct = typeof batchProducts.$inferSelect;
+export type InsertBatchProduct = z.infer<typeof insertBatchProductSchema>;
 export type BatchHistory = typeof batchHistory.$inferSelect;
 export type InsertBatchHistory = z.infer<typeof insertBatchHistorySchema>;
