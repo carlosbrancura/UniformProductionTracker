@@ -215,7 +215,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
                     <div className="flex justify-between items-start">
                       <p className="text-sm font-medium text-slate-900">{entry.action}</p>
                       <span className="text-xs text-slate-500">
-                        {format(new Date(entry.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        {entry.timestamp ? format(new Date(entry.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "Data não disponível"}
                       </span>
                     </div>
                     <p className="text-xs text-slate-600">Por: {getUserName(entry.userId)}</p>
