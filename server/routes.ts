@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertProductSchema, insertWorkshopSchema, insertBatchSchema, insertBatchHistorySchema } from "@shared/schema";
 import { db, pool } from "./db";
-import { batches, batchHistory, products } from "@shared/schema";
+import { batches, batchHistory, products, batchProducts } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { productsService } from "./products-service";
 import multer from "multer";
 import path from "path";
@@ -288,39 +289,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       console.log('Batch update request:', req.body);
       
-      const { products, cutDate, status, workshopId, expectedReturnDate, observations } = req.body;
+      const { cutDate, status, workshopId, expectedReturnDate, observations } = req.body;
       
-      // Update the batch
+      // Prepare batch data for update
       const batchData = {
-        cutDate: new Date(cutDate),
+        cutDate: cutDate ? new Date(cutDate) : undefined,
         status: status || "waiting",
         workshopId: workshopId && workshopId !== "internal" ? parseInt(workshopId) : null,
         expectedReturnDate: expectedReturnDate ? new Date(expectedReturnDate) : null,
         observations: observations || null,
       };
 
+      console.log('Updating batch with data:', batchData);
+      
       const batch = await storage.updateBatch(id, batchData);
       if (!batch) {
         return res.status(404).json({ message: "Batch not found" });
-      }
-
-      // Update batch products if provided
-      if (products && products.length > 0) {
-        // Delete existing batch products
-        await db.delete(batchProducts).where(eq(batchProducts.batchId, id));
-        
-        // Create new batch products
-        for (const product of products) {
-          if (product.productId && product.quantity) {
-            await db.insert(batchProducts).values({
-              batchId: id,
-              productId: parseInt(product.productId),
-              quantity: parseInt(product.quantity),
-              selectedColor: product.selectedColor || null,
-              selectedSize: product.selectedSize || null,
-            });
-          }
-        }
       }
       
       // Add history entry
@@ -331,10 +315,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes: observations || null
       });
       
+      console.log('Batch updated successfully:', batch);
       res.json(batch);
     } catch (error: any) {
       console.error("Batch update error:", error);
-      res.status(400).json({ message: "Failed to update batch", error: error.message });
+      res.status(500).json({ message: "Failed to update batch", error: error.message });
     }
   });
 

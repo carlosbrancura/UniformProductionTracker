@@ -69,11 +69,15 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest(`/api/batches/${batch.id}`, {
+      const response = await fetch(`/api/batches/${batch.id}`, {
         method: "PUT",
         body: JSON.stringify(data),
         headers: { "Content-Type": "application/json" },
       });
+      if (!response.ok) {
+        throw new Error(`Failed to update batch: ${response.statusText}`);
+      }
+      return response.json();
     },
     onSuccess: () => {
       toast({ title: "Lote atualizado com sucesso!" });
