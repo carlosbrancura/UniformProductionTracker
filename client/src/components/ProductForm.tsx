@@ -29,6 +29,9 @@ const productFormSchema = z.object({
     quantity: z.string().min(1, "Quantidade é obrigatória"),
   })).min(1, "Pelo menos um aviamento é obrigatório"),
   notes: z.string().optional(),
+  availableColors: z.array(z.string()).min(1, "Pelo menos uma cor é obrigatória"),
+  availableSizes: z.array(z.string()).min(1, "Pelo menos um tamanho é obrigatório"),
+  productionValue: z.string().min(1, "Valor de produção é obrigatório"),
 });
 
 type ProductFormData = z.infer<typeof productFormSchema>;
@@ -47,12 +50,25 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
       fabricMetersPerPiece: product?.fabricMetersPerPiece || "",
       notions: product?.notions || [{ name: "", quantity: "" }],
       notes: product?.notes || "",
+      availableColors: product?.availableColors || [""],
+      availableSizes: product?.availableSizes || [""],
+      productionValue: product?.productionValue?.toString() || "",
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields: notionFields, append: appendNotion, remove: removeNotion } = useFieldArray({
     control: form.control,
     name: "notions",
+  });
+
+  const { fields: colorFields, append: appendColor, remove: removeColor } = useFieldArray({
+    control: form.control,
+    name: "availableColors",
+  });
+
+  const { fields: sizeFields, append: appendSize, remove: removeSize } = useFieldArray({
+    control: form.control,
+    name: "availableSizes",
   });
 
   const mutation = useMutation({
@@ -153,7 +169,7 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append({ name: "", quantity: "" })}
+                onClick={() => appendNotion({ name: "", quantity: "" })}
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Adicionar

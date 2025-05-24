@@ -19,9 +19,9 @@ export const products = pgTable("products", {
   fabricMetersPerPiece: text("fabric_meters_per_piece").notNull(),
   notions: json("notions").$type<Array<{ name: string; quantity: string }>>().notNull(),
   notes: text("notes"),
-  color: text("color"),
-  size: text("size"),
-  productionValue: decimal("production_value", { precision: 10, scale: 2 })
+  availableColors: json("available_colors").$type<string[]>().default([]),
+  availableSizes: json("available_sizes").$type<string[]>().default([]),
+  productionValue: decimal("production_value", { precision: 10, scale: 2 }).default('0')
 });
 
 export const workshops = pgTable("workshops", {
@@ -47,13 +47,18 @@ export const batches = pgTable("batches", {
   conferenceResult: text("conference_result"), // ok, problem
   observations: text("observations"),
   imageUrl: text("image_url"),
+  // Temporary compatibility fields
+  productId: integer("product_id"),
+  quantity: integer("quantity")
 });
 
 export const batchProducts = pgTable("batch_products", {
   id: serial("id").primaryKey(),
   batchId: integer("batch_id").notNull(),
   productId: integer("product_id").notNull(),
-  quantity: integer("quantity").notNull()
+  quantity: integer("quantity").notNull(),
+  selectedColor: text("selected_color"),
+  selectedSize: text("selected_size")
 });
 
 export const batchHistory = pgTable("batch_history", {
