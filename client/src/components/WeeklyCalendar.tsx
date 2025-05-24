@@ -17,25 +17,28 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
-  const [startScrollLeft, setStartScrollLeft] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const previousWeek = () => setCurrentWeek(subWeeks(currentWeek, 1));
   const nextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1));
+  const previousDay = () => setCurrentWeek(addDays(currentWeek, -1));
+  const nextDay = () => setCurrentWeek(addDays(currentWeek, 1));
 
-  // Touch/Mouse scroll handlers for week navigation
+  // Touch/Mouse scroll handlers for smooth daily navigation
   const handleStart = (clientX: number) => {
     setIsDragging(true);
     setStartX(clientX);
+    setDragOffset(0);
   };
 
   const handleMove = (clientX: number) => {
     if (!isDragging) return;
     
     const deltaX = clientX - startX;
-    // Visual feedback during drag (optional)
+    setDragOffset(deltaX);
   };
 
   const handleEnd = (clientX: number) => {
@@ -43,13 +46,26 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
     setIsDragging(false);
     
     const deltaX = clientX - startX;
-    const threshold = 50; // Reduced threshold for better sensitivity
+    const dayThreshold = 30; // Smaller threshold for daily navigation
+    const weekThreshold = 150; // Larger movement for week navigation
     
-    if (deltaX > threshold) {
-      previousWeek(); // Drag right = previous week
-    } else if (deltaX < -threshold) {
-      nextWeek(); // Drag left = next week
+    if (Math.abs(deltaX) > weekThreshold) {
+      // Large movement = week navigation
+      if (deltaX > 0) {
+        previousWeek();
+      } else {
+        nextWeek();
+      }
+    } else if (Math.abs(deltaX) > dayThreshold) {
+      // Small movement = day navigation
+      if (deltaX > 0) {
+        previousDay();
+      } else {
+        nextDay();
+      }
     }
+    
+    setDragOffset(0);
   };
 
   // Mouse events
@@ -164,7 +180,7 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
         {/* Calendar Container with Touch Support */}
         <div 
           ref={containerRef}
-          className="overflow-hidden cursor-grab active:cursor-grabbing select-none"
+          className="overflow-hidden cursor-grab active:cursor-grabbing select-none transition-transform duration-200 ease-out"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -172,7 +188,10 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          style={{ touchAction: 'pan-x' }}
+          style={{ 
+            touchAction: 'pan-x',
+            transform: isDragging ? `translateX(${dragOffset * 0.3}px)` : 'translateX(0px)'
+          }}
         >
           {/* Calendar Header */}
           <div className="grid grid-cols-7 gap-1 mb-4">
