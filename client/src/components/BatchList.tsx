@@ -36,13 +36,14 @@ export default function BatchList({ batches, products, workshops, onBatchClick }
   const [dateFilter, setDateFilter] = useState("");
   const [workshopFilter, setWorkshopFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
-  const filteredBatches = batches.filter(batch => {
-    // Hide returned batches from the list
-    if (batch.status === "returned") {
-      return false;
-    }
-    
+  // Separate active and returned batches, then apply filters
+  const activeBatches = batches.filter(batch => batch.status !== "returned");
+  const returnedBatches = batches.filter(batch => batch.status === "returned");
+
+  const filteredActiveBatches = activeBatches.filter(batch => {
     const dateMatch = !dateFilter || formatDate(batch.cutDate).includes(dateFilter);
     const workshopMatch = !workshopFilter || workshopFilter === "all" || 
       (workshopFilter === "internal" && !batch.workshopId) || 
@@ -51,6 +52,28 @@ export default function BatchList({ batches, products, workshops, onBatchClick }
     
     return dateMatch && workshopMatch && statusMatch;
   });
+
+  const filteredReturnedBatches = returnedBatches.filter(batch => {
+    const dateMatch = !dateFilter || formatDate(batch.cutDate).includes(dateFilter);
+    const workshopMatch = !workshopFilter || workshopFilter === "all" || 
+      (workshopFilter === "internal" && !batch.workshopId) || 
+      batch.workshopId?.toString() === workshopFilter;
+    const statusMatch = !statusFilter || statusFilter === "all" || batch.status === statusFilter;
+    
+    return dateMatch && workshopMatch && statusMatch;
+  });
+
+  // Combine active batches first, then returned batches
+  const allFilteredBatches = [...filteredActiveBatches, ...filteredReturnedBatches];
+  
+  // Calculate pagination
+  const totalPages = Math.ceil(allFilteredBatches.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedBatches = allFilteredBatches.slice(startIndex, endIndex);
+
+  // Reset page when filters change
+  const resetPage = () => setCurrentPage(1);
 
   const getProductName = (productId: number) => {
     return products.find(p => p.id === productId)?.name || "Produto não encontrado";
@@ -81,7 +104,10 @@ export default function BatchList({ batches, products, workshops, onBatchClick }
             <Input
               placeholder="Filtrar por data..."
               value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
+              onChange={(e) => {
+                setDateFilter(e.target.value);
+                resetPage();
+              }}
               className="w-full"
             />
           </div>

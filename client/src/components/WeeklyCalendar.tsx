@@ -19,8 +19,9 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
   const [startX, setStartX] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
 
-  // Show 7 days centered around current date for smooth navigation
-  const viewDays = Array.from({ length: 7 }, (_, i) => addDays(currentDate, i - 3));
+  // Show 7 days starting from current week's Sunday
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+  const viewDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const previousWeek = () => setCurrentDate(subWeeks(currentDate, 1));
   const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
@@ -240,7 +241,7 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
                 const productName = getProductName(batch.productId);
                 
                 return (
-                  <div key={batch.id} className="grid grid-cols-7 gap-1 min-h-[60px]">
+                  <div key={batch.id} className="grid grid-cols-7 gap-1 min-h-[54px]">
                     <div
                       style={{ 
                         gridColumn: position.gridColumn,
