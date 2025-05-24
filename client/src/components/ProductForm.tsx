@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Product } from "@shared/schema";
@@ -79,30 +79,43 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: `Produto ${isEditing ? 'atualizado' : 'criado'} com sucesso!` });
+      toast({ 
+        title: isEditing ? "Produto atualizado com sucesso!" : "Produto criado com sucesso!" 
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       onClose();
     },
     onError: () => {
-      toast({ title: `Erro ao ${isEditing ? 'atualizar' : 'criar'} produto`, variant: "destructive" });
+      toast({ 
+        title: "Erro ao salvar produto", 
+        variant: "destructive" 
+      });
     },
   });
 
   const onSubmit = (data: ProductFormData) => {
-    mutation.mutate(data);
+    // Filter out empty colors and sizes
+    const cleanData = {
+      ...data,
+      availableColors: data.availableColors.filter(color => color.trim() !== ""),
+      availableSizes: data.availableSizes.filter(size => size.trim() !== ""),
+    };
+    mutation.mutate(cleanData);
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-screen overflow-y-auto">
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Editar Produto" : "Novo Produto"}
+          </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="name">Nome *</Label>
+              <Label htmlFor="name">Nome do Produto *</Label>
               <Input
                 id="name"
                 {...form.register("name")}
@@ -136,7 +149,7 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label htmlFor="fabricType">Tipo de Tecido *</Label>
               <Input
@@ -160,8 +173,103 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
                 <p className="text-sm text-red-600">{form.formState.errors.fabricMetersPerPiece.message}</p>
               )}
             </div>
+
+            <div>
+              <Label htmlFor="productionValue">Valor de Produção (R$) *</Label>
+              <Input
+                id="productionValue"
+                {...form.register("productionValue")}
+                placeholder="Ex: 25.00"
+                type="number"
+                step="0.01"
+              />
+              {form.formState.errors.productionValue && (
+                <p className="text-sm text-red-600">{form.formState.errors.productionValue.message}</p>
+              )}
+            </div>
           </div>
 
+          {/* Cores Disponíveis */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <Label>Cores Disponíveis *</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => appendColor("")}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Cor
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {colorFields.map((field, index) => (
+                <div key={field.id} className="flex gap-2">
+                  <Input
+                    {...form.register(`availableColors.${index}`)}
+                    placeholder="Ex: Azul, Branco, Preto"
+                    className="flex-1"
+                  />
+                  {colorFields.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeColor(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {form.formState.errors.availableColors && (
+              <p className="text-sm text-red-600">{form.formState.errors.availableColors.message}</p>
+            )}
+          </div>
+
+          {/* Tamanhos Disponíveis */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <Label>Tamanhos Disponíveis *</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => appendSize("")}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Tamanho
+              </Button>
+            </div>
+            <div className="grid grid-cols-6 gap-2">
+              {sizeFields.map((field, index) => (
+                <div key={field.id} className="flex gap-2">
+                  <Input
+                    {...form.register(`availableSizes.${index}`)}
+                    placeholder="Ex: P, M, G, GG"
+                    className="flex-1"
+                  />
+                  {sizeFields.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeSize(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {form.formState.errors.availableSizes && (
+              <p className="text-sm text-red-600">{form.formState.errors.availableSizes.message}</p>
+            )}
+          </div>
+
+          {/* Aviamentos */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <Label>Aviamentos *</Label>
@@ -176,7 +284,7 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
               </Button>
             </div>
             <div className="space-y-2">
-              {fields.map((field, index) => (
+              {notionFields.map((field, index) => (
                 <div key={field.id} className="flex gap-2">
                   <Input
                     {...form.register(`notions.${index}.name`)}
@@ -188,12 +296,12 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
                     placeholder="Quantidade"
                     className="w-32"
                   />
-                  {fields.length > 1 && (
+                  {notionFields.length > 1 && (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      onClick={() => remove(index)}
+                      onClick={() => removeNotion(index)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -211,17 +319,17 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
             <Textarea
               id="notes"
               {...form.register("notes")}
-              placeholder="Observações adicionais..."
+              placeholder="Observações adicionais sobre o produto..."
               rows={3}
             />
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? (isEditing ? "Atualizando..." : "Criando...") : (isEditing ? "Atualizar" : "Criar")}
+              {mutation.isPending ? "Salvando..." : isEditing ? "Atualizar" : "Criar"}
             </Button>
           </div>
         </form>
