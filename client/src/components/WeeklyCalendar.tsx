@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay, isWithinInterval } from "date-fns";
+import { format, startOfWeek, addDays, addWeeks, subWeeks, differenceInDays, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Batch, Product, Workshop } from "@shared/schema";
 
@@ -28,22 +28,41 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
   };
 
   const getWorkshopName = (workshopId: number | null) => {
-    if (!workshopId) return "Produção Interna";
+    if (!workshopId) return "Interno";
     const workshop = workshops.find(w => w.id === workshopId);
     return workshop?.name || "Oficina";
   };
 
-  const getBatchesForDay = (day: Date) => {
-    return batches.filter(batch => {
-      const cutDate = new Date(batch.cutDate);
-      const expectedReturn = batch.expectedReturnDate ? new Date(batch.expectedReturnDate) : cutDate;
-      
-      return isWithinInterval(day, {
-        start: cutDate,
-        end: expectedReturn
-      });
-    });
+  const getProductName = (productId: number) => {
+    const product = products.find(p => p.id === productId);
+    return product?.name || "Produto";
   };
+
+  const getBatchPosition = (batch: Batch) => {
+    const cutDate = new Date(batch.cutDate);
+    const expectedReturn = batch.expectedReturnDate ? new Date(batch.expectedReturnDate) : cutDate;
+    
+    const startCol = differenceInDays(cutDate, weekStart);
+    const endCol = differenceInDays(expectedReturn, weekStart);
+    
+    // Check if batch is visible in this week
+    if (endCol < 0 || startCol > 6) return null;
+    
+    // Adjust positions to fit within the week
+    const adjustedStartCol = Math.max(0, startCol);
+    const adjustedEndCol = Math.min(6, endCol);
+    const span = adjustedEndCol - adjustedStartCol + 1;
+    
+    return {
+      gridColumn: `${adjustedStartCol + 1} / span ${span}`,
+      visible: true
+    };
+  };
+
+  const visibleBatches = batches.filter(batch => {
+    const position = getBatchPosition(batch);
+    return position && position.visible;
+  });
 
   const dayNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -65,11 +84,10 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
           </div>
         </div>
 
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-px bg-slate-200 rounded-lg overflow-hidden">
-          {/* Header */}
+        {/* Calendar Header */}
+        <div className="grid grid-cols-7 gap-1 mb-4">
           {weekDays.map((day, index) => (
-            <div key={day.toString()} className="bg-slate-100 p-3 text-center">
+            <div key={day.toString()} className="bg-slate-50 p-3 text-center rounded-md">
               <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">
                 {dayNames[index]}
               </div>
@@ -78,49 +96,60 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
               </div>
             </div>
           ))}
+        </div>
 
-          {/* Calendar Body */}
-          {weekDays.map((day) => {
-            const dayBatches = getBatchesForDay(day);
-            
-            return (
-              <div key={day.toString()} className="bg-white p-2 h-32 relative overflow-hidden">
-                {dayBatches.map((batch, index) => {
-                  const workshopColor = getWorkshopColor(batch.workshopId);
-                  const workshopName = getWorkshopName(batch.workshopId);
-                  
-                  return (
-                    <div
-                      key={batch.id}
-                      className="absolute left-1 right-1 text-white text-xs px-2 py-1 rounded cursor-pointer hover:opacity-80 transition-opacity"
-                      style={{
-                        backgroundColor: workshopColor,
-                        top: `${6 + index * 24}px`,
-                        zIndex: 10,
-                      }}
-                      onClick={() => onBatchClick(batch)}
-                    >
-                      Lote {batch.code}, {workshopName}
+        {/* Batch Rows */}
+        <div className="space-y-3">
+          {visibleBatches.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">
+              <p>Nenhum lote programado para esta semana</p>
+            </div>
+          ) : (
+            visibleBatches.map((batch) => {
+              const position = getBatchPosition(batch);
+              if (!position) return null;
+              
+              const workshopColor = getWorkshopColor(batch.workshopId);
+              const workshopName = getWorkshopName(batch.workshopId);
+              const productName = getProductName(batch.productId);
+              
+              return (
+                <div key={batch.id} className="grid grid-cols-7 gap-1 min-h-[72px]">
+                  <div
+                    style={{ 
+                      gridColumn: position.gridColumn,
+                      backgroundColor: workshopColor 
+                    }}
+                    onClick={() => onBatchClick(batch)}
+                    className="rounded-lg p-4 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex flex-col justify-center"
+                  >
+                    <div className="font-semibold text-sm">
+                      Lote {batch.code} • {workshopName}
                     </div>
-                  );
-                })}
-              </div>
-            );
-          })}
+                    <div className="text-xs italic opacity-80 mt-1">
+                      {productName} • Qtd: {batch.quantity}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Legend */}
-        <div className="mt-6 flex flex-wrap gap-4">
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#1E40AF" }}></div>
-            <span className="text-sm text-slate-700">Produção Interna</span>
-          </div>
-          {workshops.map((workshop) => (
-            <div key={workshop.id} className="flex items-center">
-              <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: workshop.color }}></div>
-              <span className="text-sm text-slate-700">{workshop.name}</span>
+        <div className="mt-8 pt-4 border-t border-slate-100">
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center">
+              <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#1E40AF" }}></div>
+              <span className="text-sm text-slate-700">Produção Interna</span>
             </div>
-          ))}
+            {workshops.map((workshop) => (
+              <div key={workshop.id} className="flex items-center">
+                <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: workshop.color }}></div>
+                <span className="text-sm text-slate-700">{workshop.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
