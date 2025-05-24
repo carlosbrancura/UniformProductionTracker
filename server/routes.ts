@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertUserSchema, insertProductSchema, insertWorkshopSchema, insertBatchSchema, insertBatchHistorySchema } from "@shared/schema";
 import { db, pool } from "./db";
 import { batches, batchHistory, products } from "@shared/schema";
+import { productsService } from "./products-service";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -63,25 +64,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Products routes - Rebuilt with direct SQL
+  // Products routes - Using new service
   app.get("/api/products", async (req, res) => {
     try {
-      const result = await db.query(`
-        SELECT id, name, code, description, fabric_type as "fabricType", 
-               fabric_meters_per_piece as "fabricMetersPerPiece", 
-               notions::text, notes, available_colors::text as "availableColors", 
-               available_sizes::text as "availableSizes", production_value as "productionValue"
-        FROM products ORDER BY id DESC
-      `);
-      
-      // Parse JSON fields
-      const products = result.rows.map(row => ({
-        ...row,
-        notions: row.notions ? JSON.parse(row.notions) : [],
-        availableColors: row.availableColors ? JSON.parse(row.availableColors) : [],
-        availableSizes: row.availableSizes ? JSON.parse(row.availableSizes) : []
-      }));
-      
+      const products = await productsService.getAllProducts();
       res.json(products);
     } catch (error: any) {
       console.error('Products fetch error:', error.message);
@@ -91,16 +77,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/products", async (req, res) => {
     try {
-      console.log('Creating product with data:', req.body);
-      
-      // Use storage method that works for other entities
-      const product = await storage.createProduct(req.body);
-      console.log('Product created successfully:', product);
-      
+      console.log('Creating product via service:', req.body);
+      const product = await productsService.createProduct(req.body);
       res.status(201).json(product);
     } catch (error: any) {
       console.error('Product creation error:', error.message);
-      res.status(400).json({ message: "Invalid product data", error: error.message });
+      res.status(400).json({ message: "Failed to create product", error: error.message });
     }
   });
 
