@@ -1,28 +1,18 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { X, Camera, Edit, RotateCcw, Save, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { X, Camera, Edit, RotateCcw, Save, Trash2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Batch, Product, Workshop, BatchHistory, User } from "@shared/schema";
-
-const batchEditSchema = z.object({
-  quantity: z.number().min(1, "Quantidade deve ser maior que 0"),
-  workshopId: z.number().nullable(),
-  expectedReturnDate: z.string().optional(),
-  status: z.enum(["waiting", "in_production", "at_workshop", "returned"]),
-});
 
 interface BatchModalProps {
   batch: Batch;
@@ -31,22 +21,19 @@ interface BatchModalProps {
   onClose: () => void;
 }
 
-type BatchEditData = z.infer<typeof batchEditSchema>;
-
 export default function BatchModal({ batch, products, workshops, onClose }: BatchModalProps) {
   const { toast } = useToast();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
 
-  const form = useForm<BatchEditData>({
-    resolver: zodResolver(batchEditSchema),
-    defaultValues: {
-      quantity: batch.quantity,
-      workshopId: batch.workshopId,
-      expectedReturnDate: batch.expectedReturnDate ? format(new Date(batch.expectedReturnDate), "yyyy-MM-dd") : "",
-      status: batch.status as "waiting" | "in_production" | "at_workshop" | "returned",
-    },
+  // Form state for editing
+  const [editData, setEditData] = useState({
+    cutDate: batch.cutDate ? format(new Date(batch.cutDate), "yyyy-MM-dd") : "",
+    status: batch.status || "waiting",
+    workshopId: batch.workshopId ? batch.workshopId.toString() : "internal",
+    expectedReturnDate: batch.expectedReturnDate ? format(new Date(batch.expectedReturnDate), "yyyy-MM-dd") : "",
+    observations: batch.observations || "",
   });
 
   const { data: history = [] } = useQuery<BatchHistory[]>({
@@ -57,78 +44,68 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
     queryKey: ["/api/users"],
   });
 
-  const product = products.find(p => p.id === batch.productId);
-  const workshop = workshops.find(w => w.id === batch.workshopId);
-
   const uploadImageMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
-      formData.append('image', file);
-      const response = await apiRequest('POST', `/api/batches/${batch.id}/image`, formData);
-      return response.json();
+      formData.append("image", file);
+      return await apiRequest(`/api/batches/${batch.id}/image`, {
+        method: "POST",
+        body: formData,
+      });
     },
     onSuccess: () => {
       toast({ title: "Imagem enviada com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
       setImageFile(null);
     },
-    onError: () => {
-      toast({ title: "Erro ao enviar imagem", variant: "destructive" });
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao enviar imagem",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
-  const updateBatchMutation = useMutation({
-    mutationFn: async (data: BatchEditData) => {
-      const response = await apiRequest('PATCH', `/api/batches/${batch.id}`, data);
-      return response.json();
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest(`/api/batches/${batch.id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
     },
     onSuccess: () => {
       toast({ title: "Lote atualizado com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
       setIsEditing(false);
     },
-    onError: () => {
-      toast({ title: "Erro ao atualizar lote", variant: "destructive" });
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar lote",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
-  const onSubmit = (data: BatchEditData) => {
-    updateBatchMutation.mutate(data);
-  };
-
-  const deleteBatchMutation = useMutation({
+  const deleteMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('DELETE', `/api/batches/${batch.id}`);
-      return response.json();
+      return await apiRequest(`/api/batches/${batch.id}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       toast({ title: "Lote excluído com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
       onClose();
     },
-    onError: () => {
-      toast({ title: "Erro ao excluir lote", variant: "destructive" });
-    },
-  });
-
-  const handleDelete = () => {
-    if (window.confirm("Tem certeza que deseja excluir este lote? Esta ação não pode ser desfeita.")) {
-      deleteBatchMutation.mutate();
-    }
-  };
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async (status: string) => {
-      const response = await apiRequest('PUT', `/api/batches/${batch.id}`, { status });
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Status atualizado com sucesso!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
-      onClose();
-    },
-    onError: () => {
-      toast({ title: "Erro ao atualizar status", variant: "destructive" });
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir lote",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -138,26 +115,48 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    const statusMap: Record<string, string> = {
-      waiting: "Aguardando",
-      internal_production: "Produção Interna",
-      external_workshop: "Oficina Externa",
-      returned_ok: "Retornado OK",
-      returned_issues: "Retornado com Problemas",
-    };
-    return statusMap[status] || status;
+  const handleUpdate = () => {
+    updateMutation.mutate(editData);
+  };
+
+  const handleDelete = () => {
+    if (confirm("Tem certeza que deseja excluir este lote?")) {
+      deleteMutation.mutate();
+    }
   };
 
   const getStatusColor = (status: string) => {
-    const colorMap: Record<string, string> = {
-      waiting: "bg-slate-100 text-slate-800",
-      internal_production: "bg-blue-100 text-blue-800",
-      external_workshop: "bg-amber-100 text-amber-800",
-      returned_ok: "bg-green-100 text-green-800",
-      returned_issues: "bg-red-100 text-red-800",
-    };
-    return colorMap[status] || "bg-slate-100 text-slate-800";
+    switch (status) {
+      case "waiting":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "internal_production":
+      case "in_production":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "external_workshop":
+      case "at_workshop":
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      case "returned":
+        return "bg-green-100 text-green-800 border-green-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "waiting":
+        return "Aguardando";
+      case "internal_production":
+      case "in_production":
+        return "Em Produção";
+      case "external_workshop":
+      case "at_workshop":
+        return "Na Oficina";
+      case "returned":
+        return "Retornado";
+      default:
+        return status;
+    }
   };
 
   const getUserName = (userId: number) => {
@@ -166,56 +165,33 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-screen overflow-y-auto">
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
         <DialogHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <DialogTitle className="text-xl font-bold text-slate-900">
-                Lote {batch.code}
-              </DialogTitle>
-              <p className="text-sm text-slate-600">{product?.name}</p>
-            </div>
-            <div className="flex items-center space-x-2">
-              {!isEditing ? (
-                <>
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleDelete}
-                    disabled={deleteBatchMutation.isPending}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir
-                  </Button>
-                </>
-              ) : (
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      setIsEditing(false);
-                      form.reset();
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={form.handleSubmit(onSubmit)}
-                    disabled={updateBatchMutation.isPending}
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Salvar
-                  </Button>
-                </div>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-2xl font-bold text-slate-900">
+              Lote {batch.code}
+            </DialogTitle>
+            <div className="flex items-center gap-2">
+              {!isEditing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Editar
+                </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDelete}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Excluir
+              </Button>
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-4 w-4" />
               </Button>
@@ -232,100 +208,78 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
               </h3>
               
               {isEditing ? (
-                <Form {...form}>
-                  <form className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="quantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Quantidade</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                <div className="space-y-4">
+                  <div>
+                    <Label>Data de Corte</Label>
+                    <Input
+                      type="date"
+                      value={editData.cutDate}
+                      onChange={(e) => setEditData({...editData, cutDate: e.target.value})}
                     />
+                  </div>
 
-                    <FormField
-                      control={form.control}
-                      name="workshopId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Oficina</FormLabel>
-                          <Select 
-                            onValueChange={(value) => field.onChange(value === "internal" ? null : parseInt(value))}
-                            value={field.value ? field.value.toString() : "internal"}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione a oficina" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="internal">Produção Interna</SelectItem>
-                              {workshops.map((workshop) => (
-                                <SelectItem key={workshop.id} value={workshop.id.toString()}>
-                                  {workshop.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <div>
+                    <Label>Status</Label>
+                    <Select onValueChange={(value) => setEditData({...editData, status: value})} value={editData.status}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="waiting">Aguardando</SelectItem>
+                        <SelectItem value="internal_production">Produção Interna</SelectItem>
+                        <SelectItem value="external_workshop">Oficina Externa</SelectItem>
+                        <SelectItem value="returned">Retornado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione o status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="waiting">Aguardando</SelectItem>
-                              <SelectItem value="in_production">Em Produção</SelectItem>
-                              <SelectItem value="at_workshop">Na Oficina</SelectItem>
-                              <SelectItem value="returned">Retornado</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <div>
+                    <Label>Oficina</Label>
+                    <Select onValueChange={(value) => setEditData({...editData, workshopId: value})} value={editData.workshopId}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="internal">Produção Interna</SelectItem>
+                        {workshops.map((workshop) => (
+                          <SelectItem key={workshop.id} value={workshop.id.toString()}>
+                            {workshop.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                    <FormField
-                      control={form.control}
-                      name="expectedReturnDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Previsão de Retorno</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                  <div>
+                    <Label>Data Prevista de Retorno</Label>
+                    <Input
+                      type="date"
+                      value={editData.expectedReturnDate}
+                      onChange={(e) => setEditData({...editData, expectedReturnDate: e.target.value})}
                     />
-                  </form>
-                </Form>
+                  </div>
+
+                  <div>
+                    <Label>Observações</Label>
+                    <Textarea
+                      value={editData.observations}
+                      onChange={(e) => setEditData({...editData, observations: e.target.value})}
+                      placeholder="Observações sobre o lote..."
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
+                      <Save className="h-4 w-4 mr-1" />
+                      {updateMutation.isPending ? "Salvando..." : "Salvar"}
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-slate-600">Quantidade:</span>
-                    <span className="text-sm font-medium text-slate-900">{batch.quantity} peças</span>
-                  </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-slate-600">Data de Corte:</span>
                     <span className="text-sm font-medium text-slate-900">
@@ -338,18 +292,26 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
                       {getStatusLabel(batch.status)}
                     </Badge>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-slate-600">Oficina:</span>
-                    <span className="text-sm font-medium text-slate-900">
-                      {workshop?.name || "Produção Interna"}
-                    </span>
-                  </div>
+                  {batch.workshopId && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-slate-600">Oficina:</span>
+                      <span className="text-sm font-medium text-slate-900">
+                        {workshops.find(w => w.id === batch.workshopId)?.name || "N/A"}
+                      </span>
+                    </div>
+                  )}
                   {batch.expectedReturnDate && (
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">Previsão de Retorno:</span>
                       <span className="text-sm font-medium text-slate-900">
                         {format(new Date(batch.expectedReturnDate), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
+                    </div>
+                  )}
+                  {batch.observations && (
+                    <div>
+                      <span className="text-sm text-slate-600">Observações:</span>
+                      <p className="text-sm text-slate-900 mt-1">{batch.observations}</p>
                     </div>
                   )}
                 </div>
@@ -397,67 +359,43 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
             </div>
           </div>
 
-          {/* Observations */}
-          {batch.observations && (
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">Observações</h3>
-              <div className="bg-slate-50 rounded-lg p-4">
-                <p className="text-sm text-slate-700">{batch.observations}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Status History */}
+          {/* History Section */}
           <div>
-            <button 
-              onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-              className="w-full flex items-center justify-between text-lg font-semibold text-slate-900 mb-3 hover:text-blue-600 transition-colors"
-            >
-              <span>Histórico de Status ({history.length})</span>
-              <span className="text-sm">{isHistoryExpanded ? "▲" : "▼"}</span>
-            </button>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Histórico</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+              >
+                {isHistoryExpanded ? "Ocultar" : "Mostrar"} Histórico
+              </Button>
+            </div>
+            
             {isHistoryExpanded && (
-              <div className="space-y-3">
+              <div className="space-y-2 max-h-64 overflow-y-auto">
                 {history.map((entry) => (
-                  <div key={entry.id} className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
+                  <div key={entry.id} className="p-3 bg-slate-50 rounded border">
+                    <div className="flex justify-between items-start">
+                      <div>
                         <p className="text-sm font-medium text-slate-900">{entry.action}</p>
-                        <span className="text-xs text-slate-500">
-                          {entry.timestamp ? format(new Date(entry.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "Data não disponível"}
-                        </span>
+                        {entry.notes && (
+                          <p className="text-sm text-slate-600 mt-1">{entry.notes}</p>
+                        )}
                       </div>
-                      <p className="text-xs text-slate-600">Por: {getUserName(entry.userId)}</p>
-                      {entry.notes && (
-                        <p className="text-xs text-slate-600 mt-1">{entry.notes}</p>
-                      )}
+                      <div className="text-right">
+                        <p className="text-xs text-slate-500">
+                          {format(new Date(entry.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {getUserName(entry.userId)}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Modal Footer */}
-        <div className="flex justify-between items-center pt-6 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Fechar
-          </Button>
-          <div className="flex space-x-3">
-            <Button
-              variant="outline"
-              onClick={() => updateStatusMutation.mutate("returned_ok")}
-              disabled={updateStatusMutation.isPending}
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Marcar como Retornado
-            </Button>
-            <Button onClick={onClose}>
-              <Edit className="mr-2 h-4 w-4" />
-              Editar Lote
-            </Button>
           </div>
         </div>
       </DialogContent>

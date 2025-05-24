@@ -272,24 +272,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get batch products
+  app.get("/api/batch-products/:batchId", async (req, res) => {
+    try {
+      const batchId = parseInt(req.params.batchId);
+      const products = await db.select().from(batchProducts).where(eq(batchProducts.batchId, batchId));
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch batch products" });
+    }
+  });
+
   app.put("/api/batches/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const batchData = req.body;
+      console.log('Batch update request:', req.body);
+      
+      const { products, cutDate, status, workshopId, expectedReturnDate, observations } = req.body;
+      
+      // Update the batch
+      const batchData = {
+        cutDate: new Date(cutDate),
+        status: status || "waiting",
+        workshopId: workshopId && workshopId !== "internal" ? parseInt(workshopId) : null,
+        expectedReturnDate: expectedReturnDate ? new Date(expectedReturnDate) : null,
+        observations: observations || null,
+      };
+
       const batch = await storage.updateBatch(id, batchData);
       if (!batch) {
         return res.status(404).json({ message: "Batch not found" });
       }
-      
-      // Add history entry for status change
-      if (batchData.status) {
-        await storage.addBatchHistory({
-          batchId: batch.id,
-          action: `Status alterado para: ${batchData.status}`,
-          userId: 1, // TODO: Get from session
-          notes: batchData.observations || null
-        });
+
+      // Update batch products if provided
+      if (products && products.length > 0) {
+        // Delete existing batch products
+        await db.delete(batchProducts).where(eq(batchProducts.batchId, id));
+        
+        // Create new batch products
+        for (const product of products) {
+          if (product.productId && product.quantity) {
+            await db.insert(batchProducts).values({
+              batchId: id,
+              productId: parseInt(product.productId),
+              quantity: parseInt(product.quantity),
+              selectedColor: product.selectedColor || null,
+              selectedSize: product.selectedSize || null,
+            });
+          }
+        }
       }
+      
+      // Add history entry
+      await storage.addBatchHistory({
+        batchId: batch.id,
+        action: "Lote atualizado",
+        userId: 1,
+        notes: observations || null
+      });
       
       res.json(batch);
     } catch (error: any) {
