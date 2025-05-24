@@ -284,60 +284,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple batch update - status only
   app.put("/api/batches/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      console.log('Batch update request:', req.body);
+      const { status } = req.body;
       
-      const { cutDate, status, workshopId, expectedReturnDate, observations } = req.body;
+      console.log('Simple batch update - ID:', id, 'Status:', status);
       
-      console.log('Raw request data:', { cutDate, status, workshopId, expectedReturnDate, observations });
-      
-      // Prepare batch data for update - only include fields that are being changed
-      const batchData: any = {};
-
-      if (status) {
-        batchData.status = status;
-        console.log('Adding status:', status);
-      }
-      
-      if (workshopId !== undefined) {
-        batchData.workshopId = workshopId && workshopId !== "internal" ? parseInt(workshopId) : null;
-        console.log('Adding workshopId:', batchData.workshopId);
-      }
-      
-      if (observations !== undefined) {
-        batchData.observations = observations || null;
-        console.log('Adding observations:', batchData.observations);
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
       }
 
-      // Skip dates for now to isolate the problem
-      console.log('Skipping dates temporarily to test other fields');
-
-      console.log('Final batch data for update:', batchData);
-      
-      // Update directly with Drizzle instead of using storage
       const [updatedBatch] = await db
         .update(batches)
-        .set(batchData)
+        .set({ status })
         .where(eq(batches.id, id))
         .returning();
       
       if (!updatedBatch) {
         return res.status(404).json({ message: "Batch not found" });
       }
-
-      // Products are not editable - to change products, delete and recreate the batch
       
-      // Add history entry
-      await storage.addBatchHistory({
-        batchId: updatedBatch.id,
-        action: "Lote atualizado",
-        userId: 1,
-        notes: observations || null
-      });
-      
-      console.log('Batch updated successfully:', updatedBatch);
+      console.log('Batch status updated successfully:', updatedBatch);
       res.json(updatedBatch);
     } catch (error: any) {
       console.error("Batch update error:", error);

@@ -135,7 +135,8 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
   };
 
   const handleUpdate = () => {
-    updateMutation.mutate(editData);
+    // Send only status for now
+    updateMutation.mutate({ status: editData.status });
   };
 
   const handleDelete = () => {
