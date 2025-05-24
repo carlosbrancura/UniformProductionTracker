@@ -17,6 +17,49 @@ const upload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Products routes - MUST BE FIRST TO AVOID VITE INTERCEPTION
+  app.get("/api/products", async (req, res) => {
+    try {
+      const result = await pool.query('SELECT * FROM products ORDER BY id DESC');
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error('Products fetch error:', error.message);
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  app.post("/api/products-new", async (req, res) => {
+    try {
+      console.log('Received product data:', req.body);
+      const productData = req.body;
+      
+      const result = await pool.query(`
+        INSERT INTO products (
+          name, code, description, fabric_type, fabric_meters_per_piece,
+          notions, notes, available_colors, available_sizes, production_value
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *
+      `, [
+        productData.name || '',
+        productData.code || `PROD_${Date.now()}`,
+        productData.description || null,
+        productData.fabricType || '',
+        productData.fabricMetersPerPiece || '0',
+        JSON.stringify(productData.notions || []),
+        productData.notes || null,
+        JSON.stringify(productData.availableColors || []),
+        JSON.stringify(productData.availableSizes || []),
+        productData.productionValue || '0'
+      ]);
+
+      console.log('Product created:', result.rows[0]);
+      res.status(201).json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Product creation error:', error);
+      res.status(500).json({ message: "Failed to create product", error: error.message });
+    }
+  });
+
   // Users routes
   app.get("/api/users", async (req, res) => {
     try {
@@ -64,52 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Products routes - Fixed version
-  app.get("/api/products", async (req, res) => {
-    try {
-      const result = await pool.query('SELECT * FROM products ORDER BY id DESC');
-      res.json(result.rows);
-    } catch (error: any) {
-      console.error('Products fetch error:', error.message);
-      res.status(500).json({ message: "Failed to fetch products" });
-    }
-  });
 
-  // Create products - Working version
-  app.post("/api/products-new", async (req, res) => {
-    try {
-      const productData = req.body;
-      
-      const result = await pool.query(`
-        INSERT INTO products (
-          name, code, description, fabric_type, fabric_meters_per_piece,
-          notions, notes, available_colors, available_sizes, production_value
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        RETURNING *
-      `, [
-        productData.name || '',
-        productData.code || `PROD_${Date.now()}`,
-        productData.description || null,
-        productData.fabricType || '',
-        productData.fabricMetersPerPiece || '0',
-        JSON.stringify(productData.notions || []),
-        productData.notes || null,
-        JSON.stringify(productData.availableColors || []),
-        JSON.stringify(productData.availableSizes || []),
-        productData.productionValue || '0'
-      ]);
-
-      res.status(201).json(result.rows[0]);
-    } catch (error: any) {
-      console.error('Product creation error:', error);
-      res.status(500).json({ message: "Failed to create product", error: error.message });
-    }
-  });
-
-  // Fallback for old route
-  app.post("/api/products", async (req, res) => {
-    res.status(200).json({ message: "Use /api/products-new for creating products" });
-  });
 
   app.put("/api/products/:id", async (req, res) => {
     try {
