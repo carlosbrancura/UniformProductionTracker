@@ -284,13 +284,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple batch update - only essential fields
+  // Batch update with return date
   app.put("/api/batches/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { status, workshopId, observations } = req.body;
+      const { status, workshopId, observations, actualReturnDate } = req.body;
       
-      console.log('Simple batch update:', { id, status, workshopId, observations });
+      console.log('Batch update:', { id, status, workshopId, observations, actualReturnDate });
       
       const updateData: any = {};
       
@@ -304,6 +304,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (observations !== undefined) {
         updateData.observations = observations;
+      }
+      
+      if (actualReturnDate && actualReturnDate !== "") {
+        updateData.actualReturnDate = new Date(actualReturnDate);
       }
 
       const [updatedBatch] = await db

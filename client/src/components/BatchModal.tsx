@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Camera, Edit, Trash2 } from "lucide-react";
+import { X, Camera, Edit, Trash2, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { queryClient } from "@/lib/queryClient";
@@ -59,6 +59,36 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
     onError: (error: any) => {
       toast({
         title: "Erro ao enviar imagem",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const markReturnedMutation = useMutation({
+    mutationFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/batches/${batch.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "returned",
+          actualReturnDate: today
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to mark batch as returned: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Lote marcado como retornado!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao marcar como retornado",
         description: error.message,
         variant: "destructive",
       });
@@ -162,6 +192,18 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
               Lote {batch.code}
             </DialogTitle>
             <div className="flex items-center gap-2">
+              {batch.status !== "returned" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => markReturnedMutation.mutate()}
+                  className="text-green-600 hover:text-green-700"
+                  disabled={markReturnedMutation.isPending}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  {markReturnedMutation.isPending ? "Marcando..." : "Retornado"}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -217,6 +259,14 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
                     <span className="text-sm text-slate-600">Previsão de Retorno:</span>
                     <span className="text-sm font-medium text-slate-900">
                       {format(new Date(batch.expectedReturnDate), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                  </div>
+                )}
+                {batch.actualReturnDate && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">Data de Retorno:</span>
+                    <span className="text-sm font-medium text-green-700">
+                      {format(new Date(batch.actualReturnDate), "dd/MM/yyyy", { locale: ptBR })}
                     </span>
                   </div>
                 )}

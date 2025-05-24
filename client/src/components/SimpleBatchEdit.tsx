@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { X, Save } from "lucide-react";
+import { format } from "date-fns";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Batch, Workshop } from "@shared/schema";
@@ -24,6 +26,9 @@ export default function SimpleBatchEdit({ batch, workshops, onClose }: SimpleBat
     batch.workshopId ? batch.workshopId.toString() : "internal"
   );
   const [observations, setObservations] = useState(batch.observations || "");
+  const [actualReturnDate, setActualReturnDate] = useState(
+    batch.actualReturnDate ? format(new Date(batch.actualReturnDate), "yyyy-MM-dd") : ""
+  );
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -33,7 +38,8 @@ export default function SimpleBatchEdit({ batch, workshops, onClose }: SimpleBat
         body: JSON.stringify({
           status,
           workshopId: workshopId === "internal" ? null : parseInt(workshopId),
-          observations
+          observations,
+          actualReturnDate
         }),
       });
       
@@ -105,6 +111,15 @@ export default function SimpleBatchEdit({ batch, workshops, onClose }: SimpleBat
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label>Data de Retorno</Label>
+            <Input
+              type="date"
+              value={actualReturnDate}
+              onChange={(e) => setActualReturnDate(e.target.value)}
+            />
           </div>
 
           <div>
