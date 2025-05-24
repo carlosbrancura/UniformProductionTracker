@@ -17,13 +17,27 @@ const upload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // Products routes - MUST BE FIRST TO AVOID VITE INTERCEPTION
+  // Products routes - Fixed and working
   app.get("/api/products", async (req, res) => {
     try {
-      const result = await pool.query('SELECT * FROM products ORDER BY id DESC');
-      res.json(result.rows);
+      const result = await pool.query(`SELECT * FROM products ORDER BY id DESC`);
+      // Convert snake_case to camelCase for frontend
+      const products = result.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        code: row.code,
+        description: row.description,
+        fabricType: row.fabric_type,
+        fabricMetersPerPiece: row.fabric_meters_per_piece,
+        notions: row.notions,
+        notes: row.notes,
+        availableColors: row.available_colors,
+        availableSizes: row.available_sizes,
+        productionValue: row.production_value
+      }));
+      res.json(products);
     } catch (error: any) {
-      console.error('Products fetch error:', error.message);
+      console.error('Products fetch error:', error);
       res.status(500).json({ message: "Failed to fetch products" });
     }
   });
