@@ -113,7 +113,10 @@ export default function BatchList({ batches, products, workshops, onBatchClick }
           </div>
           
           <div className="flex-1 min-w-[200px]">
-            <Select value={workshopFilter} onValueChange={setWorkshopFilter}>
+            <Select value={workshopFilter} onValueChange={(value) => {
+              setWorkshopFilter(value);
+              resetPage();
+            }}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por oficina" />
               </SelectTrigger>
@@ -153,12 +156,12 @@ export default function BatchList({ batches, products, workshops, onBatchClick }
       
       <CardContent>
         <div className="space-y-4">
-          {filteredBatches.length === 0 ? (
+          {paginatedBatches.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Nenhum lote encontrado com os filtros aplicados.
             </div>
           ) : (
-            filteredBatches.map(batch => (
+            paginatedBatches.map((batch: Batch) => (
               <div
                 key={batch.id}
                 className="border rounded-lg p-4 hover:bg-muted/50 transition-colors cursor-pointer"
@@ -207,6 +210,46 @@ export default function BatchList({ batches, products, workshops, onBatchClick }
                 </div>
               </div>
             ))
+          )}
+          
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Mostrando {startIndex + 1}-{Math.min(endIndex, allFilteredBatches.length)} de {allFilteredBatches.length} lotes
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </Button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="w-8 h-8 p-0"
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Próxima
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       </CardContent>
