@@ -1,5 +1,7 @@
 import { pool } from "./db";
 
+console.log('ProductsService: Pool connection status:', !!pool);
+
 export class ProductsService {
   async getAllProducts() {
     try {
