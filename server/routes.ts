@@ -69,6 +69,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const products = await storage.getAllProducts();
       res.json(products);
     } catch (error) {
+      console.error('Products fetch error:', error);
       res.status(500).json({ message: "Failed to fetch products" });
     }
   });

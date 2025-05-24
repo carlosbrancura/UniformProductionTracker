@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, X } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { Product } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { Product } from "@shared/schema";
+import { Plus, X } from "lucide-react";
 
 interface ProductFormProps {
   product?: Product | null;
@@ -24,13 +24,7 @@ const productFormSchema = z.object({
   description: z.string().optional(),
   fabricType: z.string().min(1, "Tipo de tecido é obrigatório"),
   fabricMetersPerPiece: z.string().min(1, "Metragem por peça é obrigatória"),
-  notions: z.array(z.object({
-    name: z.string().min(1, "Nome do aviamento é obrigatório"),
-    quantity: z.string().min(1, "Quantidade é obrigatória"),
-  })).min(1, "Pelo menos um aviamento é obrigatório"),
   notes: z.string().optional(),
-  availableColors: z.array(z.string()).min(1, "Pelo menos uma cor é obrigatória"),
-  availableSizes: z.array(z.string()).min(1, "Pelo menos um tamanho é obrigatório"),
   productionValue: z.string().min(1, "Valor de produção é obrigatório"),
 });
 
@@ -38,7 +32,19 @@ type ProductFormData = z.infer<typeof productFormSchema>;
 
 export default function ProductForm({ product, onClose }: ProductFormProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const isEditing = !!product;
+  
+  // Estados para arrays
+  const [notions, setNotions] = useState<Array<{ name: string; quantity: string }>>(
+    product?.notions || [{ name: "", quantity: "" }]
+  );
+  const [colors, setColors] = useState<string[]>(
+    product?.availableColors || [""]
+  );
+  const [sizes, setSizes] = useState<string[]>(
+    product?.availableSizes || [""]
+  );
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
@@ -48,93 +54,124 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
       description: product?.description || "",
       fabricType: product?.fabricType || "",
       fabricMetersPerPiece: product?.fabricMetersPerPiece || "",
-      notions: product?.notions || [{ name: "", quantity: "" }],
       notes: product?.notes || "",
-      availableColors: product?.availableColors || [""],
-      availableSizes: product?.availableSizes || [""],
-      productionValue: product?.productionValue?.toString() || "",
+      productionValue: product?.productionValue || "0",
     },
-  });
-
-  const { fields: notionFields, append: appendNotion, remove: removeNotion } = useFieldArray({
-    control: form.control,
-    name: "notions",
-  });
-
-  const { fields: colorFields, append: appendColor, remove: removeColor } = useFieldArray({
-    control: form.control,
-    name: "availableColors",
-  });
-
-  const { fields: sizeFields, append: appendSize, remove: removeSize } = useFieldArray({
-    control: form.control,
-    name: "availableSizes",
   });
 
   const mutation = useMutation({
     mutationFn: async (data: ProductFormData) => {
+      const productData = {
+        ...data,
+        notions: notions.filter(n => n.name && n.quantity),
+        availableColors: colors.filter(c => c.trim()),
+        availableSizes: sizes.filter(s => s.trim()),
+      };
+      
       const url = isEditing ? `/api/products/${product!.id}` : '/api/products';
       const method = isEditing ? 'PUT' : 'POST';
-      const response = await apiRequest(method, url, data);
+      const response = await apiRequest(method, url, productData);
       return response.json();
     },
     onSuccess: () => {
-      toast({ 
-        title: isEditing ? "Produto atualizado com sucesso!" : "Produto criado com sucesso!" 
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      toast({
+        title: "Sucesso",
+        description: `Produto ${isEditing ? 'atualizado' : 'criado'} com sucesso!`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       onClose();
     },
     onError: () => {
-      toast({ 
-        title: "Erro ao salvar produto", 
-        variant: "destructive" 
+      toast({
+        title: "Erro",
+        description: "Falha ao salvar o produto",
+        variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: ProductFormData) => {
-    // Filter out empty colors and sizes
-    const cleanData = {
-      ...data,
-      availableColors: data.availableColors.filter(color => color.trim() !== ""),
-      availableSizes: data.availableSizes.filter(size => size.trim() !== ""),
-    };
-    mutation.mutate(cleanData);
+    mutation.mutate(data);
+  };
+
+  const addNotion = () => {
+    setNotions([...notions, { name: "", quantity: "" }]);
+  };
+
+  const removeNotion = (index: number) => {
+    setNotions(notions.filter((_, i) => i !== index));
+  };
+
+  const updateNotion = (index: number, field: 'name' | 'quantity', value: string) => {
+    const updated = [...notions];
+    updated[index][field] = value;
+    setNotions(updated);
+  };
+
+  const addColor = () => {
+    setColors([...colors, ""]);
+  };
+
+  const removeColor = (index: number) => {
+    setColors(colors.filter((_, i) => i !== index));
+  };
+
+  const updateColor = (index: number, value: string) => {
+    const updated = [...colors];
+    updated[index] = value;
+    setColors(updated);
+  };
+
+  const addSize = () => {
+    setSizes([...sizes, ""]);
+  };
+
+  const removeSize = (index: number) => {
+    setSizes(sizes.filter((_, i) => i !== index));
+  };
+
+  const updateSize = (index: number, value: string) => {
+    const updated = [...sizes];
+    updated[index] = value;
+    setSizes(updated);
   };
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Editar Produto" : "Novo Produto"}
           </DialogTitle>
         </DialogHeader>
-
+        
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="name">Nome do Produto *</Label>
+              <Label htmlFor="name">Nome *</Label>
               <Input
                 id="name"
                 {...form.register("name")}
-                placeholder="Ex: Camisa Social Masculina"
+                placeholder="Nome do produto"
               />
               {form.formState.errors.name && (
-                <p className="text-sm text-red-600">{form.formState.errors.name.message}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {form.formState.errors.name.message}
+                </p>
               )}
             </div>
-
+            
             <div>
               <Label htmlFor="code">Código *</Label>
               <Input
                 id="code"
                 {...form.register("code")}
-                placeholder="Ex: CAMISA-001"
+                placeholder="Código único"
               />
               {form.formState.errors.code && (
-                <p className="text-sm text-red-600">{form.formState.errors.code.message}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {form.formState.errors.code.message}
+                </p>
               )}
             </div>
           </div>
@@ -144,174 +181,149 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
             <Textarea
               id="description"
               {...form.register("description")}
-              placeholder="Descrição detalhada do produto..."
-              rows={3}
+              placeholder="Descrição do produto"
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="fabricType">Tipo de Tecido *</Label>
               <Input
                 id="fabricType"
                 {...form.register("fabricType")}
-                placeholder="Ex: Algodão/Poliéster (60/40)"
+                placeholder="Ex: Algodão, Poliéster"
               />
               {form.formState.errors.fabricType && (
-                <p className="text-sm text-red-600">{form.formState.errors.fabricType.message}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {form.formState.errors.fabricType.message}
+                </p>
               )}
             </div>
-
+            
             <div>
               <Label htmlFor="fabricMetersPerPiece">Metragem por Peça *</Label>
               <Input
                 id="fabricMetersPerPiece"
                 {...form.register("fabricMetersPerPiece")}
-                placeholder="Ex: 1.8m"
+                placeholder="Ex: 2.5m"
               />
               {form.formState.errors.fabricMetersPerPiece && (
-                <p className="text-sm text-red-600">{form.formState.errors.fabricMetersPerPiece.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="productionValue">Valor de Produção (R$) *</Label>
-              <Input
-                id="productionValue"
-                {...form.register("productionValue")}
-                placeholder="Ex: 25.00"
-                type="number"
-                step="0.01"
-              />
-              {form.formState.errors.productionValue && (
-                <p className="text-sm text-red-600">{form.formState.errors.productionValue.message}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {form.formState.errors.fabricMetersPerPiece.message}
+                </p>
               )}
             </div>
           </div>
 
-          {/* Cores Disponíveis */}
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <Label>Cores Disponíveis *</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => appendColor("")}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Cor
-              </Button>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {colorFields.map((field, index) => (
-                <div key={field.id} className="flex gap-2">
-                  <Input
-                    {...form.register(`availableColors.${index}`)}
-                    placeholder="Ex: Azul, Branco, Preto"
-                    className="flex-1"
-                  />
-                  {colorFields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeColor(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {form.formState.errors.availableColors && (
-              <p className="text-sm text-red-600">{form.formState.errors.availableColors.message}</p>
-            )}
-          </div>
-
-          {/* Tamanhos Disponíveis */}
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <Label>Tamanhos Disponíveis *</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => appendSize("")}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Tamanho
-              </Button>
-            </div>
-            <div className="grid grid-cols-6 gap-2">
-              {sizeFields.map((field, index) => (
-                <div key={field.id} className="flex gap-2">
-                  <Input
-                    {...form.register(`availableSizes.${index}`)}
-                    placeholder="Ex: P, M, G, GG"
-                    className="flex-1"
-                  />
-                  {sizeFields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeSize(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {form.formState.errors.availableSizes && (
-              <p className="text-sm text-red-600">{form.formState.errors.availableSizes.message}</p>
+            <Label htmlFor="productionValue">Valor de Produção *</Label>
+            <Input
+              id="productionValue"
+              {...form.register("productionValue")}
+              placeholder="0.00"
+              type="number"
+              step="0.01"
+            />
+            {form.formState.errors.productionValue && (
+              <p className="text-sm text-red-500 mt-1">
+                {form.formState.errors.productionValue.message}
+              </p>
             )}
           </div>
 
           {/* Aviamentos */}
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <Label>Aviamentos *</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => appendNotion({ name: "", quantity: "" })}
-              >
+            <div className="flex items-center justify-between mb-2">
+              <Label>Aviamentos</Label>
+              <Button type="button" onClick={addNotion} size="sm" variant="outline">
                 <Plus className="h-4 w-4 mr-1" />
                 Adicionar
               </Button>
             </div>
-            <div className="space-y-2">
-              {notionFields.map((field, index) => (
-                <div key={field.id} className="flex gap-2">
-                  <Input
-                    {...form.register(`notions.${index}.name`)}
-                    placeholder="Nome do aviamento"
-                    className="flex-1"
-                  />
-                  <Input
-                    {...form.register(`notions.${index}.quantity`)}
-                    placeholder="Quantidade"
-                    className="w-32"
-                  />
-                  {notionFields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeNotion(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+            {notions.map((notion, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <Input
+                  placeholder="Nome do aviamento"
+                  value={notion.name}
+                  onChange={(e) => updateNotion(index, 'name', e.target.value)}
+                />
+                <Input
+                  placeholder="Quantidade"
+                  value={notion.quantity}
+                  onChange={(e) => updateNotion(index, 'quantity', e.target.value)}
+                />
+                {notions.length > 1 && (
+                  <Button
+                    type="button"
+                    onClick={() => removeNotion(index)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Cores */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Cores Disponíveis</Label>
+              <Button type="button" onClick={addColor} size="sm" variant="outline">
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar
+              </Button>
             </div>
-            {form.formState.errors.notions && (
-              <p className="text-sm text-red-600">{form.formState.errors.notions.message}</p>
-            )}
+            {colors.map((color, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <Input
+                  placeholder="Nome da cor"
+                  value={color}
+                  onChange={(e) => updateColor(index, e.target.value)}
+                />
+                {colors.length > 1 && (
+                  <Button
+                    type="button"
+                    onClick={() => removeColor(index)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Tamanhos */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Tamanhos Disponíveis</Label>
+              <Button type="button" onClick={addSize} size="sm" variant="outline">
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar
+              </Button>
+            </div>
+            {sizes.map((size, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <Input
+                  placeholder="Tamanho"
+                  value={size}
+                  onChange={(e) => updateSize(index, e.target.value)}
+                />
+                {sizes.length > 1 && (
+                  <Button
+                    type="button"
+                    onClick={() => removeSize(index)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
           </div>
 
           <div>
@@ -319,17 +331,21 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
             <Textarea
               id="notes"
               {...form.register("notes")}
-              placeholder="Observações adicionais sobre o produto..."
-              rows={3}
+              placeholder="Observações adicionais"
             />
           </div>
 
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={mutation.isPending}
+            >
               Cancelar
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Salvando..." : isEditing ? "Atualizar" : "Criar"}
+              {mutation.isPending ? "Salvando..." : (isEditing ? "Atualizar" : "Criar")}
             </Button>
           </div>
         </form>

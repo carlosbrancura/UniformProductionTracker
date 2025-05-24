@@ -37,6 +37,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
   const { toast } = useToast();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
 
   const form = useForm<BatchEditData>({
     resolver: zodResolver(batchEditSchema),

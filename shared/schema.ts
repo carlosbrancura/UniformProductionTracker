@@ -17,7 +17,7 @@ export const products = pgTable("products", {
   description: text("description"),
   fabricType: text("fabric_type").notNull(),
   fabricMetersPerPiece: text("fabric_meters_per_piece").notNull(),
-  notions: json("notions").$type<Array<{ name: string; quantity: string }>>().notNull(),
+  notions: json("notions").$type<Array<{ name: string; quantity: string }>>().default([]),
   notes: text("notes"),
   availableColors: json("available_colors").$type<string[]>().default([]),
   availableSizes: json("available_sizes").$type<string[]>().default([]),
