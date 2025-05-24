@@ -409,26 +409,34 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
 
           {/* Status History */}
           <div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-3">Histórico de Status</h3>
-            <div className="space-y-3">
-              {history.map((entry) => (
-                <div key={entry.id} className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <p className="text-sm font-medium text-slate-900">{entry.action}</p>
-                      <span className="text-xs text-slate-500">
-                        {entry.timestamp ? format(new Date(entry.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "Data não disponível"}
-                      </span>
+            <button 
+              onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+              className="w-full flex items-center justify-between text-lg font-semibold text-slate-900 mb-3 hover:text-blue-600 transition-colors"
+            >
+              <span>Histórico de Status ({history.length})</span>
+              <span className="text-sm">{isHistoryExpanded ? "▲" : "▼"}</span>
+            </button>
+            {isHistoryExpanded && (
+              <div className="space-y-3">
+                {history.map((entry) => (
+                  <div key={entry.id} className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <p className="text-sm font-medium text-slate-900">{entry.action}</p>
+                        <span className="text-xs text-slate-500">
+                          {entry.timestamp ? format(new Date(entry.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "Data não disponível"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600">Por: {getUserName(entry.userId)}</p>
+                      {entry.notes && (
+                        <p className="text-xs text-slate-600 mt-1">{entry.notes}</p>
+                      )}
                     </div>
-                    <p className="text-xs text-slate-600">Por: {getUserName(entry.userId)}</p>
-                    {entry.notes && (
-                      <p className="text-xs text-slate-600 mt-1">{entry.notes}</p>
-                    )}
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
