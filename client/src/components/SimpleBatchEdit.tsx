@@ -32,15 +32,19 @@ export default function SimpleBatchEdit({ batch, workshops, onClose }: SimpleBat
 
   const updateMutation = useMutation({
     mutationFn: async () => {
+      const payload = {
+        status,
+        workshopId: workshopId === "internal" ? null : parseInt(workshopId),
+        observations,
+        actualReturnDate
+      };
+      
+      console.log('Sending update:', payload);
+      
       const response = await fetch(`/api/batches/${batch.id}/simple`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status,
-          workshopId: workshopId === "internal" ? null : parseInt(workshopId),
-          observations,
-          actualReturnDate
-        }),
+        body: JSON.stringify(payload),
       });
       
       if (!response.ok) {
@@ -50,9 +54,11 @@ export default function SimpleBatchEdit({ batch, workshops, onClose }: SimpleBat
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Update success:', data);
       toast({ title: "Lote atualizado com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
+      queryClient.refetchQueries({ queryKey: ["/api/batches"] });
       onClose();
     },
     onError: (error: any) => {
