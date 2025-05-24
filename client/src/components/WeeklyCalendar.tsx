@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, startOfWeek, addDays, addWeeks, subWeeks, differenceInDays, isWithinInterval } from "date-fns";
@@ -14,12 +14,59 @@ interface WeeklyCalendarProps {
 
 export default function WeeklyCalendar({ batches, products, workshops, onBatchClick }: WeeklyCalendarProps) {
   const [currentWeek, setCurrentWeek] = useState(new Date());
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startScrollLeft, setStartScrollLeft] = useState(0);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const previousWeek = () => setCurrentWeek(subWeeks(currentWeek, 1));
   const nextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1));
+
+  // Touch/Mouse scroll handlers for week navigation
+  const handleStart = (clientX: number) => {
+    setIsDragging(true);
+    setStartX(clientX);
+    setStartScrollLeft(containerRef.current?.scrollLeft || 0);
+  };
+
+  const handleMove = (clientX: number) => {
+    if (!isDragging || !containerRef.current) return;
+    
+    const x = clientX;
+    const walk = (x - startX) * 2;
+    containerRef.current.scrollLeft = startScrollLeft - walk;
+  };
+
+  const handleEnd = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    
+    if (!containerRef.current) return;
+    
+    const scrollDiff = startScrollLeft - containerRef.current.scrollLeft;
+    const threshold = 100;
+    
+    if (scrollDiff > threshold) {
+      nextWeek();
+    } else if (scrollDiff < -threshold) {
+      previousWeek();
+    }
+    
+    containerRef.current.scrollLeft = 0;
+  };
+
+  // Mouse events
+  const handleMouseDown = (e: React.MouseEvent) => handleStart(e.clientX);
+  const handleMouseMove = (e: React.MouseEvent) => handleMove(e.clientX);
+  const handleMouseUp = () => handleEnd();
+
+  // Touch events
+  const handleTouchStart = (e: React.TouchEvent) => handleStart(e.touches[0].clientX);
+  const handleTouchMove = (e: React.TouchEvent) => handleMove(e.touches[0].clientX);
+  const handleTouchEnd = () => handleEnd();
 
   const getWorkshopColor = (workshopId: number | null) => {
     if (!workshopId) return "#1E40AF"; // Internal production - blue-800
@@ -35,7 +82,8 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
 
   const getProductName = (productId: number) => {
     const product = products.find(p => p.id === productId);
-    return product?.name || "Produto";
+    const name = product?.name || "Produto";
+    return name.length > 25 ? name.substring(0, 25) + "..." : name;
   };
 
   const getBatchPosition = (batch: Batch) => {
@@ -84,56 +132,67 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
           </div>
         </div>
 
-        {/* Calendar Header */}
-        <div className="grid grid-cols-7 gap-1 mb-4">
-          {weekDays.map((day, index) => (
-            <div key={day.toString()} className="bg-slate-50 p-3 text-center rounded-md">
-              <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">
-                {dayNames[index]}
+        {/* Calendar Container with Touch Support */}
+        <div 
+          ref={containerRef}
+          className="overflow-hidden cursor-grab active:cursor-grabbing"
+          onMouseDown={handleMouseDown}
+          onMouseMove={isDragging ? handleMouseMove : undefined}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{ touchAction: 'pan-x' }}
+        >
+          {/* Calendar Header */}
+          <div className="grid grid-cols-7 gap-1 mb-4">
+            {weekDays.map((day, index) => (
+              <div key={day.toString()} className="bg-slate-50 p-3 text-center rounded-md">
+                <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">
+                  {dayNames[index]}
+                </div>
+                <div className="text-lg font-semibold text-slate-900 mt-1">
+                  {format(day, "dd")}
+                </div>
               </div>
-              <div className="text-lg font-semibold text-slate-900 mt-1">
-                {format(day, "dd")}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Batch Rows */}
-        <div className="space-y-3">
-          {visibleBatches.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <p>Nenhum lote programado para esta semana</p>
-            </div>
-          ) : (
-            visibleBatches.map((batch) => {
-              const position = getBatchPosition(batch);
-              if (!position) return null;
-              
-              const workshopColor = getWorkshopColor(batch.workshopId);
-              const workshopName = getWorkshopName(batch.workshopId);
-              const productName = getProductName(batch.productId);
-              
-              return (
-                <div key={batch.id} className="grid grid-cols-7 gap-1 min-h-[72px]">
-                  <div
-                    style={{ 
-                      gridColumn: position.gridColumn,
-                      backgroundColor: workshopColor 
-                    }}
-                    onClick={() => onBatchClick(batch)}
-                    className="rounded-lg p-4 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex flex-col justify-center"
-                  >
-                    <div className="font-semibold text-sm">
-                      Lote {batch.code} • {workshopName}
-                    </div>
-                    <div className="text-xs italic opacity-80 mt-1">
-                      {productName} • Qtd: {batch.quantity}
+          {/* Batch Rows */}
+          <div className="space-y-3">
+            {visibleBatches.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                <p>Nenhum lote programado para esta semana</p>
+              </div>
+            ) : (
+              visibleBatches.map((batch) => {
+                const position = getBatchPosition(batch);
+                if (!position) return null;
+                
+                const workshopColor = getWorkshopColor(batch.workshopId);
+                const workshopName = getWorkshopName(batch.workshopId);
+                const productName = getProductName(batch.productId);
+                
+                return (
+                  <div key={batch.id} className="grid grid-cols-7 gap-1 min-h-[60px]">
+                    <div
+                      style={{ 
+                        gridColumn: position.gridColumn,
+                        backgroundColor: workshopColor 
+                      }}
+                      onClick={() => onBatchClick(batch)}
+                      className="rounded-lg p-3 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center"
+                    >
+                      <div className="text-sm font-medium truncate">
+                        Lote {batch.code} • {workshopName} • <span className="italic opacity-80">{productName} (Qtd: {batch.quantity})</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
 
         {/* Legend */}
