@@ -311,42 +311,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Adding observations:', batchData.observations);
       }
 
-      // Handle dates more carefully
+      // Handle dates by only including them if they are valid strings
       if (cutDate && cutDate !== "" && cutDate !== null) {
         console.log('Processing cutDate:', cutDate, typeof cutDate);
-        try {
-          // Try parsing as ISO string first
-          const dateObj = new Date(cutDate);
-          if (!isNaN(dateObj.getTime())) {
-            batchData.cutDate = dateObj;
-            console.log('Successfully parsed cutDate:', batchData.cutDate);
-          } else {
-            console.log('Invalid cutDate, skipping');
-          }
-        } catch (e) {
-          console.log('Error parsing cutDate:', e);
-        }
+        batchData.cutDate = cutDate; // Let Drizzle handle the conversion
       }
       
       if (expectedReturnDate && expectedReturnDate !== "" && expectedReturnDate !== null) {
         console.log('Processing expectedReturnDate:', expectedReturnDate, typeof expectedReturnDate);
-        try {
-          const dateObj = new Date(expectedReturnDate);
-          if (!isNaN(dateObj.getTime())) {
-            batchData.expectedReturnDate = dateObj;
-            console.log('Successfully parsed expectedReturnDate:', batchData.expectedReturnDate);
-          } else {
-            console.log('Invalid expectedReturnDate, skipping');
-          }
-        } catch (e) {
-          console.log('Error parsing expectedReturnDate:', e);
-        }
+        batchData.expectedReturnDate = expectedReturnDate; // Let Drizzle handle the conversion
       }
 
       console.log('Final batch data for update:', batchData);
       
-      const batch = await storage.updateBatch(id, batchData);
-      if (!batch) {
+      // Update directly with Drizzle instead of using storage
+      const [updatedBatch] = await db
+        .update(batches)
+        .set(batchData)
+        .where(eq(batches.id, id))
+        .returning();
+      
+      if (!updatedBatch) {
         return res.status(404).json({ message: "Batch not found" });
       }
 
@@ -354,14 +339,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Add history entry
       await storage.addBatchHistory({
-        batchId: batch.id,
+        batchId: updatedBatch.id,
         action: "Lote atualizado",
         userId: 1,
         notes: observations || null
       });
       
-      console.log('Batch updated successfully:', batch);
-      res.json(batch);
+      console.log('Batch updated successfully:', updatedBatch);
+      res.json(updatedBatch);
     } catch (error: any) {
       console.error("Batch update error:", error);
       res.status(500).json({ message: "Failed to update batch", error: error.message });
