@@ -88,13 +88,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const productData = {
         name: req.body.name.trim(),
         code: req.body.code.trim(),
-        description: req.body.description || '',
+        description: req.body.description || null,
         fabricType: req.body.fabricType.trim(),
         fabricMetersPerPiece: req.body.fabricMetersPerPiece.trim(),
-        notions: Array.isArray(req.body.notions) ? req.body.notions : [],
-        notes: req.body.notes || '',
-        availableColors: Array.isArray(req.body.availableColors) ? req.body.availableColors : [],
-        availableSizes: Array.isArray(req.body.availableSizes) ? req.body.availableSizes : [],
+        notions: Array.isArray(req.body.notions) ? req.body.notions.filter(n => n.name && n.quantity) : [],
+        notes: req.body.notes || null,
+        availableColors: Array.isArray(req.body.availableColors) ? req.body.availableColors.filter(c => c.trim()) : [],
+        availableSizes: Array.isArray(req.body.availableSizes) ? req.body.availableSizes.filter(s => s.trim()) : [],
         productionValue: req.body.productionValue || '0'
       };
       

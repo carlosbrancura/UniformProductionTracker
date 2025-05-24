@@ -213,12 +213,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllProducts(): Promise<Product[]> {
-    return await db.select().from(products);
+    try {
+      return await db.select().from(products);
+    } catch (error) {
+      console.error('Database error in getAllProducts:', error);
+      throw error;
+    }
   }
 
-  async createProduct(insertProduct: InsertProduct): Promise<Product> {
-    const [product] = await db.insert(products).values(insertProduct).returning();
-    return product;
+  async createProduct(insertProduct: any): Promise<Product> {
+    try {
+      console.log('Creating product with data:', JSON.stringify(insertProduct, null, 2));
+      const [product] = await db.insert(products).values(insertProduct as any).returning();
+      console.log('Product created successfully:', product);
+      return product;
+    } catch (error) {
+      console.error('Database error in createProduct:', error);
+      throw error;
+    }
   }
 
   async updateProduct(id: number, productData: Partial<InsertProduct>): Promise<Product | undefined> {
