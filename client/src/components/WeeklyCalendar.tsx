@@ -29,44 +29,73 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
   const handleStart = (clientX: number) => {
     setIsDragging(true);
     setStartX(clientX);
-    setStartScrollLeft(containerRef.current?.scrollLeft || 0);
   };
 
   const handleMove = (clientX: number) => {
-    if (!isDragging || !containerRef.current) return;
+    if (!isDragging) return;
     
-    const x = clientX;
-    const walk = (x - startX) * 2;
-    containerRef.current.scrollLeft = startScrollLeft - walk;
+    const deltaX = clientX - startX;
+    // Visual feedback during drag (optional)
   };
 
-  const handleEnd = () => {
+  const handleEnd = (clientX: number) => {
     if (!isDragging) return;
     setIsDragging(false);
     
-    if (!containerRef.current) return;
+    const deltaX = clientX - startX;
+    const threshold = 50; // Reduced threshold for better sensitivity
     
-    const scrollDiff = startScrollLeft - containerRef.current.scrollLeft;
-    const threshold = 100;
-    
-    if (scrollDiff > threshold) {
-      nextWeek();
-    } else if (scrollDiff < -threshold) {
-      previousWeek();
+    if (deltaX > threshold) {
+      previousWeek(); // Drag right = previous week
+    } else if (deltaX < -threshold) {
+      nextWeek(); // Drag left = next week
     }
-    
-    containerRef.current.scrollLeft = 0;
   };
 
   // Mouse events
-  const handleMouseDown = (e: React.MouseEvent) => handleStart(e.clientX);
-  const handleMouseMove = (e: React.MouseEvent) => handleMove(e.clientX);
-  const handleMouseUp = () => handleEnd();
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleStart(e.clientX);
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      e.preventDefault();
+      handleMove(e.clientX);
+    }
+  };
+  
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (isDragging) {
+      e.preventDefault();
+      handleEnd(e.clientX);
+    }
+  };
+
+  const handleMouseLeave = (e: React.MouseEvent) => {
+    if (isDragging) {
+      handleEnd(e.clientX);
+    }
+  };
 
   // Touch events
-  const handleTouchStart = (e: React.TouchEvent) => handleStart(e.touches[0].clientX);
-  const handleTouchMove = (e: React.TouchEvent) => handleMove(e.touches[0].clientX);
-  const handleTouchEnd = () => handleEnd();
+  const handleTouchStart = (e: React.TouchEvent) => {
+    handleStart(e.touches[0].clientX);
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDragging) {
+      e.preventDefault();
+      handleMove(e.touches[0].clientX);
+    }
+  };
+  
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (isDragging) {
+      const touch = e.changedTouches[0];
+      handleEnd(touch.clientX);
+    }
+  };
 
   const getWorkshopColor = (workshopId: number | null) => {
     if (!workshopId) return "#1E40AF"; // Internal production - blue-800
@@ -135,11 +164,11 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
         {/* Calendar Container with Touch Support */}
         <div 
           ref={containerRef}
-          className="overflow-hidden cursor-grab active:cursor-grabbing"
+          className="overflow-hidden cursor-grab active:cursor-grabbing select-none"
           onMouseDown={handleMouseDown}
-          onMouseMove={isDragging ? handleMouseMove : undefined}
+          onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
