@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Plus } from "lucide-react";
 import ProductForm from "@/components/ProductForm";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Product } from "@shared/schema";
 
 export default function Products() {
@@ -22,6 +26,28 @@ export default function Products() {
   const handleNew = () => {
     setEditingProduct(null);
     setShowForm(true);
+  };
+
+  const { toast } = useToast();
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('DELETE', `/api/products/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Produto excluído com sucesso!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+    },
+    onError: () => {
+      toast({ title: "Erro ao excluir produto", variant: "destructive" });
+    },
+  });
+
+  const handleDelete = (product: Product) => {
+    if (window.confirm(`Tem certeza que deseja excluir o produto "${product.name}"? Esta ação não pode ser desfeita.`)) {
+      deleteProductMutation.mutate(product.id);
+    }
   };
 
   const handleClose = () => {
@@ -43,61 +69,77 @@ export default function Products() {
         </Button>
       </div>
 
-      <div className="grid gap-6">
-        {products.map((product) => (
-          <Card key={product.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg">{product.name}</CardTitle>
-                  <p className="text-sm text-slate-600 font-mono">{product.code}</p>
-                </div>
-                <div className="flex space-x-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {product.description && (
-                <p className="text-sm text-slate-700 mb-4">{product.description}</p>
-              )}
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-medium text-slate-900 mb-2">Tecido Principal</h4>
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <p className="text-sm text-slate-700">{product.fabricType}</p>
-                    <p className="text-xs text-slate-500">{product.fabricMetersPerPiece} por peça</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-slate-900 mb-2">Aviamentos</h4>
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <ul className="text-sm text-slate-700 space-y-1">
-                      {product.notions.map((notion, index) => (
-                        <li key={index}>• {notion.name} ({notion.quantity})</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {product.notes && (
-                <div className="mt-4 pt-4 border-t">
-                  <p className="text-sm text-slate-600">
-                    <strong>Observações:</strong> {product.notes}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Listagem Compacta em Tabela */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Produtos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Código</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Tipo de Tecido</TableHead>
+                <TableHead>Cor</TableHead>
+                <TableHead>Tamanho</TableHead>
+                <TableHead>Valor de Produção</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell className="font-medium">{product.code}</TableCell>
+                  <TableCell>{product.name}</TableCell>
+                  <TableCell>{product.fabricType}</TableCell>
+                  <TableCell>
+                    {product.color ? (
+                      <Badge variant="outline">{product.color}</Badge>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {product.size ? (
+                      <Badge variant="outline">{product.size}</Badge>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {product.productionValue ? (
+                      `R$ ${product.productionValue}`
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(product)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(product)}
+                        disabled={deleteProductMutation.isPending}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {showForm && (
         <ProductForm

@@ -58,92 +58,95 @@ export default function Dashboard() {
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-slate-900">Lotes de Produção</h2>
-          <Button onClick={handleNewBatch} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="mr-2 h-4 w-4" />
+    <div className="space-y-6">
+      {/* Cronograma Semanal com Destaque Total */}
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-slate-900">Cronograma Semanal de Produção</h1>
+          <Button onClick={handleNewBatch} size="lg" className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-5 w-5 mr-2" />
             Novo Lote
           </Button>
         </div>
+        
+        <WeeklyCalendar 
+          batches={batches} 
+          products={products}
+          workshops={workshops}
+          onBatchClick={handleBatchClick}
+        />
+      </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-slate-200 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label className="text-sm font-medium text-slate-700 mb-1">Produto</Label>
-              <Select value={filters.product} onValueChange={(value) => setFilters({ ...filters, product: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os produtos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os produtos</SelectItem>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id.toString()}>
-                      {product.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label className="text-sm font-medium text-slate-700 mb-1">Oficina</Label>
-              <Select value={filters.workshop} onValueChange={(value) => setFilters({ ...filters, workshop: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas as oficinas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as oficinas</SelectItem>
-                  {workshops.map((workshop) => (
-                    <SelectItem key={workshop.id} value={workshop.id.toString()}>
-                      {workshop.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label className="text-sm font-medium text-slate-700 mb-1">Status</Label>
-              <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="waiting">Aguardando</SelectItem>
-                  <SelectItem value="internal_production">Produção Interna</SelectItem>
-                  <SelectItem value="external_workshop">Oficina Externa</SelectItem>
-                  <SelectItem value="returned_ok">Retornado OK</SelectItem>
-                  <SelectItem value="returned_issues">Retornado com Problemas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label className="text-sm font-medium text-slate-700 mb-1">Data Inicial</Label>
-              <Input
-                type="date"
-                value={filters.dateStart}
-                onChange={(e) => setFilters({ ...filters, dateStart: e.target.value })}
-              />
-            </div>
+      {/* Filtros movidos para baixo do cronograma */}
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-slate-200">
+        <h3 className="text-lg font-semibold text-slate-900 mb-4">Filtros de Pesquisa</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <Label className="text-sm font-medium text-slate-700 mb-1">Produto</Label>
+            <Select value={filters.product} onValueChange={(value) => setFilters({ ...filters, product: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os produtos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os produtos</SelectItem>
+                {products.map((product) => (
+                  <SelectItem key={product.id} value={product.id.toString()}>
+                    {product.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label className="text-sm font-medium text-slate-700 mb-1">Oficina</Label>
+            <Select value={filters.workshop} onValueChange={(value) => setFilters({ ...filters, workshop: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as oficinas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as oficinas</SelectItem>
+                {workshops.map((workshop) => (
+                  <SelectItem key={workshop.id} value={workshop.id.toString()}>
+                    {workshop.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label className="text-sm font-medium text-slate-700 mb-1">Status</Label>
+            <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="waiting">Aguardando</SelectItem>
+                <SelectItem value="internal_production">Produção Interna</SelectItem>
+                <SelectItem value="external_workshop">Oficina Externa</SelectItem>
+                <SelectItem value="returned_ok">Retornado OK</SelectItem>
+                <SelectItem value="returned_issues">Retornado com Problemas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label className="text-sm font-medium text-slate-700 mb-1">Data Inicial</Label>
+            <Input
+              type="date"
+              value={filters.dateStart}
+              onChange={(e) => setFilters({ ...filters, dateStart: e.target.value })}
+            />
           </div>
         </div>
       </div>
 
-      <WeeklyCalendar 
-        batches={filteredBatches} 
-        products={products}
-        workshops={workshops}
-        onBatchClick={handleBatchClick}
-      />
-
-      <div className="mt-8">
+      {/* Lista de Lotes */}
+      <div className="bg-white rounded-lg shadow">
         <BatchList
-          batches={batches || []}
+          batches={filteredBatches || []}
           products={products || []}
           workshops={workshops || []}
           onBatchClick={handleBatchClick}

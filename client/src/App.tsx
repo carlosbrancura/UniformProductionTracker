@@ -13,9 +13,15 @@ import Navigation from "@/components/Navigation";
 function Router() {
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header />
-      <Navigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Header />
+            <Navigation />
+          </div>
+        </div>
+      </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/products" component={Products} />
