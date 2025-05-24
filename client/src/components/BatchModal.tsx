@@ -1,14 +1,28 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Camera, Edit, RotateCcw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { X, Camera, Edit, RotateCcw, Save } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Batch, Product, Workshop, BatchHistory, User } from "@shared/schema";
+
+const batchEditSchema = z.object({
+  quantity: z.number().min(1, "Quantidade deve ser maior que 0"),
+  workshopId: z.number().nullable(),
+  expectedReturnDate: z.string().optional(),
+  status: z.enum(["waiting", "in_production", "at_workshop", "returned"]),
+});
 
 interface BatchModalProps {
   batch: Batch;
@@ -17,9 +31,22 @@ interface BatchModalProps {
   onClose: () => void;
 }
 
+type BatchEditData = z.infer<typeof batchEditSchema>;
+
 export default function BatchModal({ batch, products, workshops, onClose }: BatchModalProps) {
   const { toast } = useToast();
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const form = useForm<BatchEditData>({
+    resolver: zodResolver(batchEditSchema),
+    defaultValues: {
+      quantity: batch.quantity,
+      workshopId: batch.workshopId,
+      expectedReturnDate: batch.expectedReturnDate ? format(new Date(batch.expectedReturnDate), "yyyy-MM-dd") : "",
+      status: batch.status as "waiting" | "in_production" | "at_workshop" | "returned",
+    },
+  });
 
   const { data: history = [] } = useQuery<BatchHistory[]>({
     queryKey: ["/api/batches", batch.id, "history"],
@@ -48,6 +75,25 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
       toast({ title: "Erro ao enviar imagem", variant: "destructive" });
     },
   });
+
+  const updateBatchMutation = useMutation({
+    mutationFn: async (data: BatchEditData) => {
+      const response = await apiRequest('PATCH', `/api/batches/${batch.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Lote atualizado com sucesso!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
+      setIsEditing(false);
+    },
+    onError: () => {
+      toast({ title: "Erro ao atualizar lote", variant: "destructive" });
+    },
+  });
+
+  const onSubmit = (data: BatchEditData) => {
+    updateBatchMutation.mutate(data);
+  };
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
@@ -108,9 +154,38 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
               </DialogTitle>
               <p className="text-sm text-slate-600">{product?.name}</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center space-x-2">
+              {!isEditing ? (
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              ) : (
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setIsEditing(false);
+                      form.reset();
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={form.handleSubmit(onSubmit)}
+                    disabled={updateBatchMutation.isPending}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Salvar
+                  </Button>
+                </div>
+              )}
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -118,39 +193,133 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
           {/* Batch Details */}
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Detalhes do Lote</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-slate-600">Quantidade:</span>
-                  <span className="text-sm font-medium text-slate-900">{batch.quantity} peças</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-slate-600">Data de Corte:</span>
-                  <span className="text-sm font-medium text-slate-900">
-                    {format(new Date(batch.cutDate), "dd/MM/yyyy", { locale: ptBR })}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-slate-600">Status:</span>
-                  <Badge className={getStatusColor(batch.status)}>
-                    {getStatusLabel(batch.status)}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-slate-600">Oficina:</span>
-                  <span className="text-sm font-medium text-slate-900">
-                    {workshop?.name || "Produção Interna"}
-                  </span>
-                </div>
-                {batch.expectedReturnDate && (
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                {isEditing ? "Editar Lote" : "Detalhes do Lote"}
+              </h3>
+              
+              {isEditing ? (
+                <Form {...form}>
+                  <form className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="quantity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantidade</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="workshopId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Oficina</FormLabel>
+                          <Select 
+                            onValueChange={(value) => field.onChange(value === "internal" ? null : parseInt(value))}
+                            value={field.value ? field.value.toString() : "internal"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione a oficina" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="internal">Produção Interna</SelectItem>
+                              {workshops.map((workshop) => (
+                                <SelectItem key={workshop.id} value={workshop.id.toString()}>
+                                  {workshop.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="waiting">Aguardando</SelectItem>
+                              <SelectItem value="in_production">Em Produção</SelectItem>
+                              <SelectItem value="at_workshop">Na Oficina</SelectItem>
+                              <SelectItem value="returned">Retornado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="expectedReturnDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Previsão de Retorno</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </form>
+                </Form>
+              ) : (
+                <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm text-slate-600">Previsão de Retorno:</span>
+                    <span className="text-sm text-slate-600">Quantidade:</span>
+                    <span className="text-sm font-medium text-slate-900">{batch.quantity} peças</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">Data de Corte:</span>
                     <span className="text-sm font-medium text-slate-900">
-                      {format(new Date(batch.expectedReturnDate), "dd/MM/yyyy", { locale: ptBR })}
+                      {format(new Date(batch.cutDate), "dd/MM/yyyy", { locale: ptBR })}
                     </span>
                   </div>
-                )}
-              </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">Status:</span>
+                    <Badge className={getStatusColor(batch.status)}>
+                      {getStatusLabel(batch.status)}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">Oficina:</span>
+                    <span className="text-sm font-medium text-slate-900">
+                      {workshop?.name || "Produção Interna"}
+                    </span>
+                  </div>
+                  {batch.expectedReturnDate && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-slate-600">Previsão de Retorno:</span>
+                      <span className="text-sm font-medium text-slate-900">
+                        {format(new Date(batch.expectedReturnDate), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
