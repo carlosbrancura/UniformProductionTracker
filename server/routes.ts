@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertProductSchema, insertWorkshopSchema, insertBatchSchema, insertBatchHistorySchema } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { batches, batchHistory, products } from "@shared/schema";
 import multer from "multer";
 import path from "path";
@@ -63,48 +63,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Products routes
+  // Products routes - Rebuilt with direct SQL
   app.get("/api/products", async (req, res) => {
     try {
-      console.log('Fetching products...');
-      const products = await storage.getAllProducts();
-      console.log('Products found:', products.length);
+      const result = await db.query(`
+        SELECT id, name, code, description, fabric_type as "fabricType", 
+               fabric_meters_per_piece as "fabricMetersPerPiece", 
+               notions::text, notes, available_colors::text as "availableColors", 
+               available_sizes::text as "availableSizes", production_value as "productionValue"
+        FROM products ORDER BY id DESC
+      `);
+      
+      // Parse JSON fields
+      const products = result.rows.map(row => ({
+        ...row,
+        notions: row.notions ? JSON.parse(row.notions) : [],
+        availableColors: row.availableColors ? JSON.parse(row.availableColors) : [],
+        availableSizes: row.availableSizes ? JSON.parse(row.availableSizes) : []
+      }));
+      
       res.json(products);
-    } catch (error) {
-      console.error('Products fetch error:', error);
-      res.status(500).json({ message: "Failed to fetch products", error: error.message });
+    } catch (error: any) {
+      console.error('Products fetch error:', error.message);
+      res.status(500).json({ message: "Failed to fetch products" });
     }
   });
 
   app.post("/api/products", async (req, res) => {
     try {
-      console.log('=== CREATING PRODUCT ===');
-      console.log('Raw request:', JSON.stringify(req.body, null, 2));
+      console.log('Creating product with data:', req.body);
       
-      // Direct database insertion with correct column names
-      const [product] = await db.insert(products).values({
-        name: req.body.name || '',
-        code: req.body.code || '', 
-        description: req.body.description || null,
-        fabricType: req.body.fabricType || '',
-        fabricMetersPerPiece: req.body.fabricMetersPerPiece || '',
-        notions: JSON.stringify(req.body.notions || []),
-        notes: req.body.notes || null,
-        availableColors: JSON.stringify(req.body.availableColors || []),
-        availableSizes: JSON.stringify(req.body.availableSizes || []),
-        productionValue: req.body.productionValue || '0'
-      }).returning();
+      // Use storage method that works for other entities
+      const product = await storage.createProduct(req.body);
+      console.log('Product created successfully:', product);
       
-      console.log('Product created:', product);
       res.status(201).json(product);
     } catch (error: any) {
-      console.error('Database error:', error.message);
-      console.error('Full error:', error);
-      res.status(400).json({ 
-        message: "Failed to create product", 
-        error: error.message,
-        detail: error.detail
-      });
+      console.error('Product creation error:', error.message);
+      res.status(400).json({ message: "Invalid product data", error: error.message });
     }
   });
 

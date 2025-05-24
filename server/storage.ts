@@ -224,11 +224,29 @@ export class DatabaseStorage implements IStorage {
   async createProduct(insertProduct: any): Promise<Product> {
     try {
       console.log('Creating product with data:', JSON.stringify(insertProduct, null, 2));
-      const [product] = await db.insert(products).values(insertProduct as any).returning();
+      
+      // Map the data to match database column names
+      const productData = {
+        name: insertProduct.name || '',
+        code: insertProduct.code || '',
+        description: insertProduct.description || null,
+        fabricType: insertProduct.fabricType || '',
+        fabricMetersPerPiece: insertProduct.fabricMetersPerPiece || '',
+        notions: insertProduct.notions || [],
+        notes: insertProduct.notes || null,
+        availableColors: insertProduct.availableColors || [],
+        availableSizes: insertProduct.availableSizes || [],
+        productionValue: insertProduct.productionValue || '0'
+      };
+      
+      console.log('Mapped product data:', JSON.stringify(productData, null, 2));
+      
+      const [product] = await db.insert(products).values(productData).returning();
       console.log('Product created successfully:', product);
       return product;
-    } catch (error) {
-      console.error('Database error in createProduct:', error);
+    } catch (error: any) {
+      console.error('Database error in createProduct:', error.message);
+      console.error('Full error:', error);
       throw error;
     }
   }
