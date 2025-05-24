@@ -146,7 +146,7 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
                   <SelectValue placeholder="Selecione a oficina" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Produção Interna</SelectItem>
+                  <SelectItem value="internal">Produção Interna</SelectItem>
                   {workshops.map((workshop) => (
                     <SelectItem key={workshop.id} value={workshop.id.toString()}>
                       {workshop.name}
