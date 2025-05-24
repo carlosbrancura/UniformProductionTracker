@@ -32,7 +32,7 @@ export default function SimpleBatchEdit({ batch, workshops, onClose }: SimpleBat
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/batches/${batch.id}`, {
+      const response = await fetch(`/api/batches/${batch.id}/simple`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -284,8 +284,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Batch update with SQL approach for dates
-  app.put("/api/batches/:id", async (req, res) => {
+  // Simple batch edit - pure SQL
+  app.put("/api/batches/:id/simple", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { status, workshopId, observations, actualReturnDate } = req.body;
