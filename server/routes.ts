@@ -234,38 +234,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/batches", async (req, res) => {
     try {
-      // Manual validation without schema
-      if (!req.body.productId || !req.body.quantity || !req.body.cutDate) {
-        return res.status(400).json({ message: "Missing required fields" });
+      console.log('Batch creation request:', req.body);
+      
+      // Check what fields are actually being sent
+      const { products, cutDate, status, workshopId, expectedReturnDate, observations } = req.body;
+      
+      if (!products || !Array.isArray(products) || products.length === 0) {
+        return res.status(400).json({ message: "Products array is required" });
+      }
+      
+      if (!cutDate) {
+        return res.status(400).json({ message: "Cut date is required" });
       }
 
-      // Generate unique batch code
-      const code = String(Date.now()).slice(-3).padStart(3, '0');
-      
-      // Direct database insertion
-      const [batch] = await db.insert(batches).values({
-        code,
-        productId: parseInt(req.body.productId),
-        quantity: parseInt(req.body.quantity),
-        cutDate: new Date(req.body.cutDate),
-        status: req.body.status || "waiting",
-        workshopId: req.body.workshopId ? parseInt(req.body.workshopId) : null,
-        expectedReturnDate: req.body.expectedReturnDate ? new Date(req.body.expectedReturnDate) : null,
-        observations: req.body.observations || null,
-        sentToProductionDate: null,
-        actualReturnDate: null,
-        conferenceResult: null,
-        imageUrl: null,
-      }).returning();
-      
-      // Add history entry
-      await db.insert(batchHistory).values({
-        batchId: batch.id,
-        action: "Lote criado",
-        userId: 1,
-        notes: null,
-        timestamp: new Date()
-      });
+      // Create the batch using storage service which handles multiple products
+      const batchData = {
+        cutDate: new Date(cutDate),
+        status: status || "waiting",
+        workshopId: workshopId && workshopId !== "internal" ? parseInt(workshopId) : null,
+        expectedReturnDate: expectedReturnDate ? new Date(expectedReturnDate) : null,
+        observations: observations || null,
+        products: products.map((p: any) => ({
+          productId: parseInt(p.productId),
+          quantity: parseInt(p.quantity),
+          selectedColor: p.selectedColor,
+          selectedSize: p.selectedSize,
+        }))
+      };
+
+      const batch = await storage.createBatch(batchData);
+      console.log('Batch created successfully:', batch);
       
       res.status(201).json(batch);
     } catch (error: any) {

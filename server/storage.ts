@@ -4,7 +4,7 @@ import {
   Workshop, InsertWorkshop,
   Batch, InsertBatch,
   BatchHistory, InsertBatchHistory,
-  users, products, workshops, batches, batchHistory
+  users, products, workshops, batches, batchHistory, batchProducts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -301,10 +301,41 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(batches);
   }
 
-  async createBatch(insertBatch: InsertBatch): Promise<Batch> {
+  async createBatch(batchData: any): Promise<Batch> {
     const code = this.batchCodeCounter.toString().padStart(3, '0');
     this.batchCodeCounter++;
-    const [batch] = await db.insert(batches).values({ ...insertBatch, code }).returning();
+    
+    // Extract products from batchData
+    const { products, ...batchFields } = batchData;
+    
+    // Create the batch first
+    const [batch] = await db.insert(batches).values({ 
+      ...batchFields, 
+      code 
+    }).returning();
+    
+    // Create batch products if provided
+    if (products && products.length > 0) {
+      for (const product of products) {
+        await db.insert(batchProducts).values({
+          batchId: batch.id,
+          productId: product.productId,
+          quantity: product.quantity,
+          selectedColor: product.selectedColor || null,
+          selectedSize: product.selectedSize || null,
+        });
+      }
+    }
+    
+    // Add history entry
+    await db.insert(batchHistory).values({
+      batchId: batch.id,
+      action: "Lote criado",
+      userId: 1,
+      notes: null,
+      timestamp: new Date()
+    });
+    
     return batch;
   }
 
