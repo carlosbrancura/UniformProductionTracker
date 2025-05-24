@@ -289,22 +289,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       console.log('Batch update request:', req.body);
       
-      const { cutDate, status, workshopId, expectedReturnDate, observations } = req.body;
+      const { cutDate, status, workshopId, expectedReturnDate, observations, products } = req.body;
       
-      // Prepare batch data for update
-      const batchData = {
-        cutDate: cutDate ? new Date(cutDate) : undefined,
+      // Prepare batch data for update - filter out undefined values
+      const batchData: any = {
         status: status || "waiting",
         workshopId: workshopId && workshopId !== "internal" ? parseInt(workshopId) : null,
-        expectedReturnDate: expectedReturnDate ? new Date(expectedReturnDate) : null,
         observations: observations || null,
       };
+
+      // Only add dates if they are provided and valid
+      if (cutDate && cutDate !== "") {
+        batchData.cutDate = new Date(cutDate);
+      }
+      
+      if (expectedReturnDate && expectedReturnDate !== "") {
+        batchData.expectedReturnDate = new Date(expectedReturnDate);
+      }
 
       console.log('Updating batch with data:', batchData);
       
       const batch = await storage.updateBatch(id, batchData);
       if (!batch) {
         return res.status(404).json({ message: "Batch not found" });
+      }
+
+      // Update batch products if provided
+      if (products && products.length > 0) {
+        // Delete existing batch products
+        await db.delete(batchProducts).where(eq(batchProducts.batchId, id));
+        
+        // Create new batch products
+        for (const product of products) {
+          if (product.productId && product.quantity) {
+            await db.insert(batchProducts).values({
+              batchId: id,
+              productId: parseInt(product.productId),
+              quantity: parseInt(product.quantity),
+              selectedColor: product.selectedColor || null,
+              selectedSize: product.selectedSize || null,
+            });
+          }
+        }
       }
       
       // Add history entry
