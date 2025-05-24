@@ -79,7 +79,6 @@ export default function Dashboard() {
 
       {/* Filtros movidos para baixo do cronograma */}
       <div className="bg-white rounded-lg p-4 shadow-sm border border-slate-200">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">Filtros de Pesquisa</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <Label className="text-sm font-medium text-slate-700 mb-1">Produto</Label>

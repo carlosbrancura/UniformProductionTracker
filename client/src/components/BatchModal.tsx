@@ -67,20 +67,22 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
 
   const markReturnedMutation = useMutation({
     mutationFn: async () => {
+      const newStatus = batch.status === "returned" ? "waiting" : "returned";
       const response = await fetch(`/api/batches/${batch.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: "returned"
+          status: newStatus
         }),
       });
       if (!response.ok) {
-        throw new Error(`Failed to mark batch as returned: ${response.statusText}`);
+        throw new Error(`Failed to update batch status: ${response.statusText}`);
       }
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Lote marcado como retornado!" });
+      const message = batch.status === "returned" ? "Status anterior restaurado!" : "Lote marcado como retornado!";
+      toast({ title: message });
       queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
       onClose();
     },
@@ -220,9 +222,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
                 <Trash2 className="h-4 w-4 mr-1" />
                 {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
               </Button>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
+
             </div>
           </div>
         </DialogHeader>

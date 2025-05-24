@@ -238,7 +238,7 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
                 
                 const workshopColor = getWorkshopColor(batch.workshopId);
                 const workshopName = getWorkshopName(batch.workshopId);
-                const productName = getProductName(batch.productId);
+                const productName = batch.productId ? getProductName(batch.productId) : "Produto";
                 
                 return (
                   <div key={batch.id} className="grid grid-cols-7 gap-1 min-h-[54px]">
