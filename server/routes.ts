@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertProductSchema, insertWorkshopSchema, insertBatchSchema, insertBatchHistorySchema } from "@shared/schema";
 import { db } from "./db";
-import { batches, batchHistory } from "@shared/schema";
+import { batches, batchHistory, products } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -78,33 +78,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/products", async (req, res) => {
     try {
-      console.log('Received product data:', JSON.stringify(req.body, null, 2));
+      console.log('=== CREATING PRODUCT ===');
+      console.log('Raw request:', JSON.stringify(req.body, null, 2));
       
-      // Validate required fields
-      if (!req.body.name || !req.body.code || !req.body.fabricType || !req.body.fabricMetersPerPiece) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-
-      const productData = {
-        name: req.body.name.trim(),
-        code: req.body.code.trim(),
+      // Direct database insertion with correct column names
+      const [product] = await db.insert(products).values({
+        name: req.body.name || '',
+        code: req.body.code || '', 
         description: req.body.description || null,
-        fabricType: req.body.fabricType.trim(),
-        fabricMetersPerPiece: req.body.fabricMetersPerPiece.trim(),
-        notions: Array.isArray(req.body.notions) ? req.body.notions.filter(n => n.name && n.quantity) : [],
+        fabricType: req.body.fabricType || '',
+        fabricMetersPerPiece: req.body.fabricMetersPerPiece || '',
+        notions: JSON.stringify(req.body.notions || []),
         notes: req.body.notes || null,
-        availableColors: Array.isArray(req.body.availableColors) ? req.body.availableColors.filter(c => c.trim()) : [],
-        availableSizes: Array.isArray(req.body.availableSizes) ? req.body.availableSizes.filter(s => s.trim()) : [],
+        availableColors: JSON.stringify(req.body.availableColors || []),
+        availableSizes: JSON.stringify(req.body.availableSizes || []),
         productionValue: req.body.productionValue || '0'
-      };
+      }).returning();
       
-      console.log('Processed product data:', JSON.stringify(productData, null, 2));
-      
-      const product = await storage.createProduct(productData);
+      console.log('Product created:', product);
       res.status(201).json(product);
-    } catch (error) {
-      console.error('Product creation error:', error);
-      res.status(400).json({ message: "Invalid product data", error: error.message });
+    } catch (error: any) {
+      console.error('Database error:', error.message);
+      console.error('Full error:', error);
+      res.status(400).json({ 
+        message: "Failed to create product", 
+        error: error.message,
+        detail: error.detail
+      });
     }
   });
 
