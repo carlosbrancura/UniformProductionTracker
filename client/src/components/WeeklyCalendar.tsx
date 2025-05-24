@@ -19,8 +19,8 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
   const [startX, setStartX] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
 
-  // Show 7 days starting from current date
-  const viewDays = Array.from({ length: 7 }, (_, i) => addDays(currentDate, i));
+  // Show 7 days centered around current date for smooth navigation
+  const viewDays = Array.from({ length: 7 }, (_, i) => addDays(currentDate, i - 3));
 
   const previousWeek = () => setCurrentDate(subWeeks(currentDate, 1));
   const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
@@ -135,16 +135,19 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
     const cutDate = new Date(batch.cutDate);
     const expectedReturn = batch.expectedReturnDate ? new Date(batch.expectedReturnDate) : cutDate;
     
-    const startCol = differenceInDays(cutDate, currentDate);
-    const endCol = differenceInDays(expectedReturn, currentDate);
+    // Calculate position relative to the first day in viewDays
+    const viewStart = viewDays[0];
+    const startCol = differenceInDays(cutDate, viewStart);
+    const endCol = differenceInDays(expectedReturn, viewStart);
     
-    // Check if batch is visible in this week
+    // Check if batch is visible in current view (7 days)
     if (endCol < 0 || startCol > 6) return null;
     
-    // Adjust positions to fit within the week
     const adjustedStartCol = Math.max(0, startCol);
     const adjustedEndCol = Math.min(6, endCol);
     const span = adjustedEndCol - adjustedStartCol + 1;
+    
+    if (span <= 0) return null;
     
     return {
       gridColumn: `${adjustedStartCol + 1} / span ${span}`,
