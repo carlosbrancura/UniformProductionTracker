@@ -23,6 +23,7 @@ export default function Dashboard() {
 
   const { data: batches = [], isLoading: batchesLoading } = useQuery<Batch[]>({
     queryKey: ["/api/batches"],
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
   });
 
   const { data: products = [] } = useQuery<Product[]>({

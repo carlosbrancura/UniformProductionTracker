@@ -7,7 +7,17 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull(), // admin, production_supervisor, cutter
-  permissions: text("permissions").notNull(), // view, register, edit
+  permissions: json("permissions").$type<{
+    products: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+    workshops: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+    users: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+    batches: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+  }>().default({
+    products: { view: false, create: false, edit: false, delete: false },
+    workshops: { view: false, create: false, edit: false, delete: false },
+    users: { view: false, create: false, edit: false, delete: false },
+    batches: { view: false, create: false, edit: false, delete: false },
+  }),
 });
 
 export const products = pgTable("products", {
