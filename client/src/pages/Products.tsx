@@ -33,14 +33,22 @@ export default function Products() {
   const deleteProductMutation = useMutation({
     mutationFn: async (id: number) => {
       const response = await apiRequest('DELETE', `/api/products/${id}`);
-      return response.json();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao excluir produto');
+      }
+      return response;
     },
     onSuccess: () => {
       toast({ title: "Produto excluído com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     },
-    onError: () => {
-      toast({ title: "Erro ao excluir produto", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ 
+        title: "Erro ao excluir produto", 
+        description: error.message,
+        variant: "destructive" 
+      });
     },
   });
 
@@ -94,15 +102,29 @@ export default function Products() {
                   <TableCell>{product.name}</TableCell>
                   <TableCell>{product.fabricType}</TableCell>
                   <TableCell>
-                    {product.color ? (
-                      <Badge variant="outline">{product.color}</Badge>
+                    {product.availableColors && product.availableColors.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {product.availableColors.slice(0, 3).map((color, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">{color}</Badge>
+                        ))}
+                        {product.availableColors.length > 3 && (
+                          <span className="text-xs text-gray-500">+{product.availableColors.length - 3}</span>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    {product.size ? (
-                      <Badge variant="outline">{product.size}</Badge>
+                    {product.availableSizes && product.availableSizes.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {product.availableSizes.slice(0, 3).map((size, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">{size}</Badge>
+                        ))}
+                        {product.availableSizes.length > 3 && (
+                          <span className="text-xs text-gray-500">+{product.availableSizes.length - 3}</span>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
