@@ -26,6 +26,7 @@ const productFormSchema = z.object({
   fabricMetersPerPiece: z.string().min(1, "Metragem por peça é obrigatória"),
   notes: z.string().optional(),
   productionValue: z.string().min(1, "Valor de produção é obrigatório"),
+  isActive: z.boolean().default(true),
 });
 
 type ProductFormData = z.infer<typeof productFormSchema>;
@@ -56,6 +57,7 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
       fabricMetersPerPiece: product?.fabricMetersPerPiece || "",
       notes: product?.notes || "",
       productionValue: product?.productionValue || "0",
+      isActive: product?.isActive !== 0,
     },
   });
 
@@ -343,6 +345,16 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
               {...form.register("notes")}
               placeholder="Observações adicionais"
             />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isActive"
+              {...form.register("isActive")}
+              className="rounded border-gray-300"
+            />
+            <Label htmlFor="isActive">Produto ativo (aparece no cadastro de lotes)</Label>
           </div>
 
           <div className="flex justify-end gap-2">
