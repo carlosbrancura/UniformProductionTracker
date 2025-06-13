@@ -217,13 +217,23 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
 
           <div>
             <Label htmlFor="productionValue">Valor de Produção *</Label>
-            <Input
-              id="productionValue"
-              {...form.register("productionValue")}
-              placeholder="0.00"
-              type="number"
-              step="0.01"
-            />
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">R$</span>
+              <Input
+                id="productionValue"
+                {...form.register("productionValue")}
+                placeholder="0,00"
+                className="pl-10"
+                onChange={(e) => {
+                  // Format as currency while typing
+                  let value = e.target.value.replace(/\D/g, '');
+                  value = (parseInt(value) / 100).toFixed(2);
+                  value = value.replace('.', ',');
+                  e.target.value = value;
+                  form.setValue("productionValue", value);
+                }}
+              />
+            </div>
             {form.formState.errors.productionValue && (
               <p className="text-sm text-red-500 mt-1">
                 {form.formState.errors.productionValue.message}

@@ -1,22 +1,49 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import UserForm from "@/components/UserForm";
 import type { User } from "@shared/schema";
 
 export default function Users() {
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const { toast } = useToast();
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete user");
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Usuário excluído com sucesso!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    },
+    onError: () => {
+      toast({ title: "Erro ao excluir usuário", variant: "destructive" });
+    },
+  });
+
   const handleEdit = (user: User) => {
     setEditingUser(user);
     setShowForm(true);
+  };
+
+  const handleDelete = (user: User) => {
+    if (confirm(`Tem certeza que deseja excluir o usuário ${user.username}?`)) {
+      deleteMutation.mutate(user.id);
+    }
   };
 
   const handleNew = () => {
@@ -112,7 +139,12 @@ export default function Users() {
                   <Button variant="ghost" size="sm" className="mr-2" onClick={() => handleEdit(user)}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleDelete(user)}
+                    disabled={deleteMutation.isPending}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </td>

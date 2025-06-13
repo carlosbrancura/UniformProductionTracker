@@ -25,6 +25,7 @@ const batchFormSchema = z.object({
   status: z.string().min(1, "Status é obrigatório"),
   workshopId: z.string().optional(),
   expectedReturnDate: z.string().optional(),
+  actualReturnDate: z.string().optional(),
   observations: z.string().optional(),
   products: z.array(z.object({
     productId: z.string().min(1, "Produto é obrigatório"),
@@ -111,7 +112,14 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
               )}
             </div>
 
-
+            <div>
+              <Label htmlFor="actualReturnDate">Data de Retorno</Label>
+              <Input
+                id="actualReturnDate"
+                type="date"
+                {...form.register("actualReturnDate")}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

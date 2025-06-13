@@ -153,13 +153,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/products/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const deleted = await storage.deleteProduct(id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Product not found" });
+      
+      // Check if product is used in any batches
+      const batchesUsingProduct = await db
+        .select()
+        .from(batchProducts)
+        .where(eq(batchProducts.productId, id))
+        .limit(1);
+      
+      if (batchesUsingProduct.length > 0) {
+        return res.status(400).json({ 
+          message: "Não é possível excluir produto que está sendo usado em lotes" 
+        });
       }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete product" });
+      
+      const [deletedProduct] = await db
+        .delete(products)
+        .where(eq(products.id, id))
+        .returning();
+      
+      if (deletedProduct) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Product not found" });
+      }
+    } catch (error: any) {
+      console.error("Delete product error:", error);
+      res.status(500).json({ message: "Failed to delete product", error: error.message });
     }
   });
 
