@@ -68,6 +68,7 @@ export default function ProductForm({ product, onClose }: ProductFormProps) {
         notions: notions.filter(n => n.name && n.quantity),
         availableColors: colors.filter(c => c.trim()),
         availableSizes: sizes.filter(s => s.trim()),
+        isActive: data.isActive ? 1 : 0,
       };
       
       const url = isEditing ? `/api/products/${product!.id}` : '/api/products-new';

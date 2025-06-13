@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,18 @@ type BatchFormData = z.infer<typeof batchFormSchema>;
 
 export default function BatchForm({ products, workshops, onClose }: BatchFormProps) {
   const { toast } = useToast();
+  const [productSearches, setProductSearches] = useState<{ [key: number]: string }>({});
+  
+  // Filter active products only
+  const activeProducts = products.filter(product => product.isActive === 1);
+  
+  const getFilteredProducts = (searchTerm: string) => {
+    if (searchTerm.length < 3) return [];
+    return activeProducts.filter(product => 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.code.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
   
   const form = useForm<BatchFormData>({
     resolver: zodResolver(batchFormSchema),
@@ -195,26 +207,44 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Produto *</Label>
-                        <Select 
-                          onValueChange={(value) => {
-                            form.setValue(`products.${index}.productId`, value);
-                            // Reset color and size when product changes
-                            form.setValue(`products.${index}.selectedColor`, "");
-                            form.setValue(`products.${index}.selectedSize`, "");
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o produto" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {products.map((product) => (
-                              <SelectItem key={product.id} value={product.id.toString()}>
-                                {product.name} - {product.code}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Label>Produto * (digite pelo menos 3 letras)</Label>
+                        <div className="relative">
+                          <Input
+                            placeholder="Digite o nome ou código do produto..."
+                            value={productSearches[index] || ""}
+                            onChange={(e) => {
+                              const searchTerm = e.target.value;
+                              setProductSearches(prev => ({ ...prev, [index]: searchTerm }));
+                              // Clear selection when typing
+                              if (searchTerm.length < 3) {
+                                form.setValue(`products.${index}.productId`, "");
+                              }
+                            }}
+                          />
+                          {productSearches[index] && productSearches[index].length >= 3 && (
+                            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                              {getFilteredProducts(productSearches[index]).map((product) => (
+                                <div
+                                  key={product.id}
+                                  className="p-2 hover:bg-gray-100 cursor-pointer"
+                                  onClick={() => {
+                                    form.setValue(`products.${index}.productId`, product.id.toString());
+                                    setProductSearches(prev => ({ ...prev, [index]: `${product.name} - ${product.code}` }));
+                                    // Reset color and size when product changes
+                                    form.setValue(`products.${index}.selectedColor`, "");
+                                    form.setValue(`products.${index}.selectedSize`, "");
+                                  }}
+                                >
+                                  <div className="font-medium">{product.name}</div>
+                                  <div className="text-sm text-gray-500">{product.code}</div>
+                                </div>
+                              ))}
+                              {getFilteredProducts(productSearches[index]).length === 0 && (
+                                <div className="p-2 text-gray-500">Nenhum produto ativo encontrado</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         {form.formState.errors.products?.[index]?.productId && (
                           <p className="text-sm text-red-600">{form.formState.errors.products[index]?.productId?.message}</p>
                         )}

@@ -92,6 +92,7 @@ export default function Products() {
                 <TableHead>Cor</TableHead>
                 <TableHead>Tamanho</TableHead>
                 <TableHead>Valor de Produção</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -135,6 +136,11 @@ export default function Products() {
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={product.isActive === 1 ? "default" : "secondary"}>
+                      {product.isActive === 1 ? "Ativo" : "Inativo"}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
