@@ -7,7 +7,7 @@ import {
   users, products, workshops, batches, batchHistory, batchProducts
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -46,10 +46,28 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  private batchCodeCounter: number = 52; // Starting from 052 based on seed data
+  private batchCodeCounter: number = 1;
 
   constructor() {
     this.seedData();
+    this.initializeBatchCounter();
+  }
+
+  private async initializeBatchCounter() {
+    try {
+      const latestBatch = await db
+        .select({ code: batches.code })
+        .from(batches)
+        .orderBy(desc(batches.code))
+        .limit(1);
+      
+      if (latestBatch.length > 0) {
+        this.batchCodeCounter = parseInt(latestBatch[0].code) + 1;
+      }
+    } catch (error) {
+      console.log('No existing batches found, starting from 001');
+      this.batchCodeCounter = 1;
+    }
   }
 
   private async seedData() {

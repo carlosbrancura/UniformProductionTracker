@@ -65,12 +65,34 @@ export default function Users() {
     return roleMap[role] || role;
   };
 
-  const getPermissionsLabel = (permissions: string) => {
-    const permList = permissions.split(',');
-    if (permList.includes('view') && permList.includes('register') && permList.includes('edit')) {
-      return "Todas";
+  const getPermissionsLabel = (permissions: any) => {
+    if (typeof permissions === 'string') {
+      const permList = permissions.split(',');
+      if (permList.includes('view') && permList.includes('register') && permList.includes('edit')) {
+        return "Todas";
+      }
+      return permList.join(', ');
     }
-    return permList.join(', ');
+    
+    if (typeof permissions === 'object' && permissions) {
+      const hasFullAccess = Object.values(permissions).every((menu: any) => 
+        menu && typeof menu === 'object' && 
+        menu.view && menu.create && menu.edit && menu.delete
+      );
+      
+      if (hasFullAccess) return "Todas";
+      
+      const activeMenus = Object.entries(permissions)
+        .filter(([_, menu]: [string, any]) => 
+          menu && typeof menu === 'object' && 
+          (menu.view || menu.create || menu.edit || menu.delete)
+        )
+        .map(([menuName]) => menuName);
+      
+      return activeMenus.length > 0 ? activeMenus.join(', ') : "Nenhuma";
+    }
+    
+    return "Nenhuma";
   };
 
   const getInitials = (username: string) => {
@@ -127,7 +149,7 @@ export default function Users() {
                 </td>
                 <td className="py-4 px-6">
                   <Badge variant="secondary">
-                    {getPermissionsLabel(user.permissions)}
+                    {getPermissionsLabel(user.permissions || {})}
                   </Badge>
                 </td>
                 <td className="py-4 px-6">
