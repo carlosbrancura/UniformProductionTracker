@@ -162,22 +162,22 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
   };
 
   const visibleBatches = batches.filter(batch => {
-    // Hide returned batches from the calendar
-    if (batch.status === "returned") {
-      return false;
-    }
-    
+    // Don't hide returned batches, show all batches for testing
     const cutDate = new Date(batch.cutDate);
-    const expectedReturn = batch.expectedReturnDate ? new Date(batch.expectedReturnDate) : cutDate;
+    const endDate = batch.actualReturnDate 
+      ? new Date(batch.actualReturnDate)
+      : batch.expectedReturnDate
+        ? new Date(batch.expectedReturnDate)
+        : new Date(cutDate.getTime() + 7 * 24 * 60 * 60 * 1000); // Default 7 days span
     
-    return viewDays.some(day => 
-      isWithinInterval(day, { start: cutDate, end: expectedReturn })
-    );
+    // Check if batch overlaps with current week view
+    const weekStart = viewDays[0];
+    const weekEnd = viewDays[6];
+    
+    return (cutDate <= weekEnd && endDate >= weekStart);
   }).sort((a, b) => {
-    // Sort by expected return date - newest deadlines first (top), older deadlines last (bottom)
-    const aReturn = a.expectedReturnDate ? new Date(a.expectedReturnDate) : new Date(a.cutDate);
-    const bReturn = b.expectedReturnDate ? new Date(b.expectedReturnDate) : new Date(b.cutDate);
-    return bReturn.getTime() - aReturn.getTime();
+    // Sort by cut date
+    return new Date(a.cutDate).getTime() - new Date(b.cutDate).getTime();
   });
 
   const dayNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];

@@ -41,15 +41,19 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
   const { toast } = useToast();
   const [productSearches, setProductSearches] = useState<{ [key: number]: string }>({});
   
-  // Filter active products only
-  const activeProducts = products.filter(product => product.isActive === 1);
+  // Filter active products only (default to active if isActive field doesn't exist)
+  const activeProducts = products.filter(product => product.isActive === 1 || product.isActive === undefined);
   
   const getFilteredProducts = (searchTerm: string) => {
     if (searchTerm.length < 3) return [];
-    return activeProducts.filter(product => 
+    console.log('Search term:', searchTerm);
+    console.log('Active products:', activeProducts.length);
+    const filtered = activeProducts.filter(product => 
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.code.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    console.log('Filtered products:', filtered.length);
+    return filtered;
   };
   
   const form = useForm<BatchFormData>({
@@ -221,12 +225,12 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
                               }
                             }}
                           />
-                          {productSearches[index] && productSearches[index].length >= 3 && (
-                            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {productSearches[index] && productSearches[index].length >= 3 && !productSearches[index].includes(' - ') && (
+                            <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto top-full mt-1">
                               {getFilteredProducts(productSearches[index]).map((product) => (
                                 <div
                                   key={product.id}
-                                  className="p-2 hover:bg-gray-100 cursor-pointer"
+                                  className="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
                                   onClick={() => {
                                     form.setValue(`products.${index}.productId`, product.id.toString());
                                     setProductSearches(prev => ({ ...prev, [index]: `${product.name} - ${product.code}` }));
@@ -235,12 +239,12 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
                                     form.setValue(`products.${index}.selectedSize`, "");
                                   }}
                                 >
-                                  <div className="font-medium">{product.name}</div>
-                                  <div className="text-sm text-gray-500">{product.code}</div>
+                                  <div className="font-medium text-gray-900">{product.name}</div>
+                                  <div className="text-sm text-gray-500">Código: {product.code}</div>
                                 </div>
                               ))}
                               {getFilteredProducts(productSearches[index]).length === 0 && (
-                                <div className="p-2 text-gray-500">Nenhum produto ativo encontrado</div>
+                                <div className="p-3 text-gray-500 text-center">Nenhum produto ativo encontrado com "{productSearches[index]}"</div>
                               )}
                             </div>
                           )}
