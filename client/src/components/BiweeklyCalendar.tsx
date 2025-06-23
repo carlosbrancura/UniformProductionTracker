@@ -14,7 +14,11 @@ interface BiweeklyCalendarProps {
 
 export default function BiweeklyCalendar({ batches, products, workshops, onBatchClick }: BiweeklyCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [isFirstHalf, setIsFirstHalf] = useState(true);
+  
+  // Automatically detect which half of the month we're in
+  const today = new Date();
+  const todayDay = today.getDate();
+  const [isFirstHalf, setIsFirstHalf] = useState(todayDay <= 15);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -157,7 +161,9 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
     const endCol = differenceInDays(returnDate, viewStart);
     
     // Check if batch is visible in current view
-    if (endCol < 0 || startCol >= periodLength) return null;
+    if (endCol < 0 || startCol >= periodLength) {
+      return null;
+    }
     
     const adjustedStartCol = Math.max(0, startCol);
     const adjustedEndCol = Math.min(periodLength - 1, endCol);
@@ -184,7 +190,9 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
     const periodStart = viewDays[0];
     const periodEnd = viewDays[viewDays.length - 1];
     
-    return (cutDate <= periodEnd && endDate >= periodStart);
+    const overlaps = (cutDate <= periodEnd && endDate >= periodStart);
+    
+    return overlaps;
   }).sort((a, b) => {
     // Sort by cut date
     return new Date(a.cutDate).getTime() - new Date(b.cutDate).getTime();
@@ -261,6 +269,8 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
               const workshopColor = getWorkshopColor(batch.workshopId);
               const workshopName = getWorkshopName(batch.workshopId);
               const productName = batch.productId ? getProductName(batch.productId) : "Produto";
+              
+
               
               return (
                 <div key={batch.id} className={`grid gap-1 min-h-[40px]`} style={{ gridTemplateColumns: `repeat(${periodLength}, 1fr)` }}>
