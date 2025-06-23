@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { format, startOfMonth, endOfMonth, addDays, addMonths, subMonths, differenceInDays } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, startOfMonth, endOfMonth, addDays, addMonths, subMonths, differenceInDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Batch, Product, Workshop } from "@shared/schema";
 
@@ -14,6 +15,7 @@ interface BiweeklyCalendarProps {
 
 export default function BiweeklyCalendar({ batches, products, workshops, onBatchClick }: BiweeklyCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<"biweekly" | "monthly">("biweekly");
   
   // Automatically detect which half of the month we're in
   const today = new Date();
@@ -24,33 +26,48 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
   const [startX, setStartX] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
 
-  // Determine current period (1-15 or 16-end of month)
+  // Determine current period based on view mode
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const midMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 15);
   
-  const periodStart = isFirstHalf ? monthStart : addDays(midMonth, 1);
-  const periodEnd = isFirstHalf ? midMonth : monthEnd;
+  let periodStart: Date, periodEnd: Date, periodLength: number, viewDays: Date[];
   
-  // Calculate days in current period
-  const periodLength = differenceInDays(periodEnd, periodStart) + 1;
-  const viewDays = Array.from({ length: periodLength }, (_, i) => addDays(periodStart, i));
+  if (viewMode === "monthly") {
+    periodStart = monthStart;
+    periodEnd = monthEnd;
+    periodLength = differenceInDays(periodEnd, periodStart) + 1;
+    viewDays = Array.from({ length: periodLength }, (_, i) => addDays(periodStart, i));
+  } else {
+    periodStart = isFirstHalf ? monthStart : addDays(midMonth, 1);
+    periodEnd = isFirstHalf ? midMonth : monthEnd;
+    periodLength = differenceInDays(periodEnd, periodStart) + 1;
+    viewDays = Array.from({ length: periodLength }, (_, i) => addDays(periodStart, i));
+  }
 
   const previousPeriod = () => {
-    if (isFirstHalf) {
+    if (viewMode === "monthly") {
       setCurrentDate(subMonths(currentDate, 1));
-      setIsFirstHalf(false);
     } else {
-      setIsFirstHalf(true);
+      if (isFirstHalf) {
+        setCurrentDate(subMonths(currentDate, 1));
+        setIsFirstHalf(false);
+      } else {
+        setIsFirstHalf(true);
+      }
     }
   };
   
   const nextPeriod = () => {
-    if (isFirstHalf) {
-      setIsFirstHalf(false);
-    } else {
+    if (viewMode === "monthly") {
       setCurrentDate(addMonths(currentDate, 1));
-      setIsFirstHalf(true);
+    } else {
+      if (isFirstHalf) {
+        setIsFirstHalf(false);
+      } else {
+        setCurrentDate(addMonths(currentDate, 1));
+        setIsFirstHalf(true);
+      }
     }
   };
 
@@ -200,8 +217,12 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
 
   const getPeriodTitle = () => {
     const monthName = format(currentDate, "MMMM yyyy", { locale: ptBR });
-    const period = isFirstHalf ? "1ª Quinzena" : "2ª Quinzena";
-    return `${period} - ${monthName}`;
+    if (viewMode === "monthly") {
+      return monthName;
+    } else {
+      const period = isFirstHalf ? "1ª Quinzena" : "2ª Quinzena";
+      return `${period} - ${monthName}`;
+    }
   };
 
   return (
@@ -231,6 +252,18 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+        
+        <div className="flex items-center gap-2">
+          <Select value={viewMode} onValueChange={(value: "biweekly" | "monthly") => setViewMode(value)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="biweekly">Quinzenal</SelectItem>
+              <SelectItem value="monthly">Mensal</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Calendar Grid */}
@@ -247,13 +280,49 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
       >
         {/* Day Headers */}
         <div className={`grid gap-1 mb-2`} style={{ gridTemplateColumns: `repeat(${periodLength}, 1fr)` }}>
-          {viewDays.map((day, index) => (
-            <div key={index} className="text-center py-2 text-sm font-medium text-slate-600 bg-slate-50 rounded">
-              <div>{format(day, "dd", { locale: ptBR })}</div>
-              <div className="text-xs">{format(day, "EEE", { locale: ptBR })}</div>
-            </div>
-          ))}
+          {viewDays.map((day, index) => {
+            const isToday = isSameDay(day, today);
+            return (
+              <div 
+                key={index} 
+                className={`text-center py-2 text-sm font-medium rounded ${
+                  isToday 
+                    ? "bg-orange-500 text-white" 
+                    : "text-slate-600 bg-slate-50"
+                }`}
+              >
+                <div>{format(day, "dd", { locale: ptBR })}</div>
+                <div className="text-xs">{format(day, "EEE", { locale: ptBR })}</div>
+              </div>
+            );
+          })}
         </div>
+
+        {/* Today Column Background */}
+        {viewDays.some(day => isSameDay(day, today)) && (
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{ 
+              top: '80px', // Below headers
+              bottom: '80px' // Above legend
+            }}
+          >
+            <div 
+              className={`grid gap-1 h-full`} 
+              style={{ gridTemplateColumns: `repeat(${periodLength}, 1fr)` }}
+            >
+              {viewDays.map((day, index) => {
+                const isToday = isSameDay(day, today);
+                return (
+                  <div 
+                    key={index}
+                    className={isToday ? "bg-slate-50/50" : ""}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Batch Bars */}
         <div className="relative space-y-1 overflow-y-auto" style={{ height: 'calc(100% - 80px)' }}>
@@ -271,7 +340,7 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
               const productName = batch.productId ? getProductName(batch.productId) : "Produto";
               
               return (
-                <div key={batch.id} className={`grid gap-1 min-h-[40px]`} style={{ gridTemplateColumns: `repeat(${periodLength}, 1fr)` }}>
+                <div key={batch.id} className={`grid gap-1 min-h-[40px] relative z-10`} style={{ gridTemplateColumns: `repeat(${periodLength}, 1fr)` }}>
                   <div
                     style={{ 
                       gridColumn: position.gridColumn,
