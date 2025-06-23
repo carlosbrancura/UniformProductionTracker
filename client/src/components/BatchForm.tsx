@@ -46,14 +46,10 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
   
   const getFilteredProducts = (searchTerm: string) => {
     if (searchTerm.length < 3) return [];
-    console.log('Search term:', searchTerm);
-    console.log('Active products:', activeProducts.length);
-    const filtered = activeProducts.filter(product => 
+    return activeProducts.filter(product => 
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.code.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    console.log('Filtered products:', filtered.length);
-    return filtered;
   };
   
   const form = useForm<BatchFormData>({
@@ -210,45 +206,43 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
+                      <div className="relative">
                         <Label>Produto * (digite pelo menos 3 letras)</Label>
-                        <div className="relative">
-                          <Input
-                            placeholder="Digite o nome ou código do produto..."
-                            value={productSearches[index] || ""}
-                            onChange={(e) => {
-                              const searchTerm = e.target.value;
-                              setProductSearches(prev => ({ ...prev, [index]: searchTerm }));
-                              // Clear selection when typing
-                              if (searchTerm.length < 3) {
-                                form.setValue(`products.${index}.productId`, "");
-                              }
-                            }}
-                          />
-                          {productSearches[index] && productSearches[index].length >= 3 && !productSearches[index].includes(' - ') && (
-                            <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto top-full mt-1">
-                              {getFilteredProducts(productSearches[index]).map((product) => (
-                                <div
-                                  key={product.id}
-                                  className="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                  onClick={() => {
-                                    form.setValue(`products.${index}.productId`, product.id.toString());
-                                    setProductSearches(prev => ({ ...prev, [index]: `${product.name} - ${product.code}` }));
-                                    // Reset color and size when product changes
-                                    form.setValue(`products.${index}.selectedColor`, "");
-                                    form.setValue(`products.${index}.selectedSize`, "");
-                                  }}
-                                >
-                                  <div className="font-medium text-gray-900">{product.name}</div>
-                                  <div className="text-sm text-gray-500">Código: {product.code}</div>
-                                </div>
-                              ))}
-                              {getFilteredProducts(productSearches[index]).length === 0 && (
-                                <div className="p-3 text-gray-500 text-center">Nenhum produto ativo encontrado com "{productSearches[index]}"</div>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        <Input
+                          placeholder="Digite o nome ou código do produto..."
+                          value={productSearches[index] || ""}
+                          onChange={(e) => {
+                            const searchTerm = e.target.value;
+                            setProductSearches(prev => ({ ...prev, [index]: searchTerm }));
+                            // Clear selection when typing
+                            if (searchTerm.length < 3) {
+                              form.setValue(`products.${index}.productId`, "");
+                            }
+                          }}
+                        />
+                        {productSearches[index] && productSearches[index].length >= 3 && !productSearches[index].includes(' - ') && getFilteredProducts(productSearches[index]).length > 0 && (
+                          <div 
+                            className="absolute z-[9999] w-full bg-white border border-gray-200 rounded-md shadow-xl max-h-48 overflow-y-auto"
+                            style={{ top: '100%', left: 0, marginTop: '4px' }}
+                          >
+                            {getFilteredProducts(productSearches[index]).map((product) => (
+                              <div
+                                key={product.id}
+                                className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                onClick={() => {
+                                  form.setValue(`products.${index}.productId`, product.id.toString());
+                                  setProductSearches(prev => ({ ...prev, [index]: `${product.name} - ${product.code}` }));
+                                  // Reset color and size when product changes
+                                  form.setValue(`products.${index}.selectedColor`, "");
+                                  form.setValue(`products.${index}.selectedSize`, "");
+                                }}
+                              >
+                                <div className="font-medium text-gray-900">{product.name}</div>
+                                <div className="text-sm text-gray-500">Código: {product.code}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {form.formState.errors.products?.[index]?.productId && (
                           <p className="text-sm text-red-600">{form.formState.errors.products[index]?.productId?.message}</p>
                         )}

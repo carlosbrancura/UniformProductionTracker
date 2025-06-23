@@ -63,8 +63,10 @@ export default function BatchList({ batches, products, workshops, onBatchClick }
     return dateMatch && workshopMatch && statusMatch;
   });
 
-  // Combine active batches first, then returned batches
-  const allFilteredBatches = [...filteredActiveBatches, ...filteredReturnedBatches];
+  // Sort batches by creation date (most recent first) and combine
+  const sortedActiveBatches = filteredActiveBatches.sort((a, b) => b.id - a.id);
+  const sortedReturnedBatches = filteredReturnedBatches.sort((a, b) => b.id - a.id);
+  const allFilteredBatches = [...sortedActiveBatches, ...sortedReturnedBatches];
   
   // Calculate pagination
   const totalPages = Math.ceil(allFilteredBatches.length / itemsPerPage);
