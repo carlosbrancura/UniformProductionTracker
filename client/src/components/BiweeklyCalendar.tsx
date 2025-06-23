@@ -167,10 +167,12 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
 
   const getBatchPosition = (batch: Batch) => {
     const cutDate = new Date(batch.cutDate);
-    // Use expectedReturnDate for schedule planning, otherwise default span
-    const returnDate = batch.expectedReturnDate
-      ? new Date(batch.expectedReturnDate)
-      : new Date(cutDate.getTime() + 1 * 24 * 60 * 60 * 1000); // Default 1 day from cut date
+    // Use actualReturnDate if returned, otherwise expectedReturnDate for planning
+    const returnDate = batch.status === 'returned' && batch.actualReturnDate
+      ? new Date(batch.actualReturnDate)
+      : batch.expectedReturnDate
+        ? new Date(batch.expectedReturnDate)
+        : new Date(cutDate.getTime() + 1 * 24 * 60 * 60 * 1000); // Default 1 day from cut date
     
     // Calculate position relative to the first day in viewDays
     const viewStart = viewDays[0];
@@ -195,8 +197,7 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
   };
 
   const visibleBatches = batches.filter(batch => {
-    // Hide returned batches from schedule
-    if (batch.status === 'returned') return false;
+    // Show all batches, including returned ones
     
     const cutDate = new Date(batch.cutDate);
     const endDate = batch.expectedReturnDate
@@ -339,10 +340,12 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
                         key={batch.id}
                         style={{ 
                           gridColumn: position.gridColumn,
-                          backgroundColor: workshopColor 
+                          backgroundColor: batch.status === 'returned' ? '#6B7280' : workshopColor 
                         }}
                         onClick={() => onBatchClick(batch)}
-                        className="rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center"
+                        className={`rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center ${
+                          batch.status === 'returned' ? 'opacity-70' : ''
+                        }`}
                       >
                         <div className="text-xs font-medium truncate">
                           Lote {batch.code} • {workshopName} • <span className="italic opacity-80">{productName} (Qtd: {batch.quantity})</span>

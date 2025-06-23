@@ -1,18 +1,19 @@
 import React, { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Printer } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Product, Workshop } from "@shared/schema";
+import type { Product, Workshop, Batch } from "@shared/schema";
 
 interface BatchFormProps {
   products: Product[];
@@ -40,6 +41,38 @@ type BatchFormData = z.infer<typeof batchFormSchema>;
 export default function BatchForm({ products, workshops, onClose }: BatchFormProps) {
   const { toast } = useToast();
   const [productSearches, setProductSearches] = useState<{ [key: number]: string }>({});
+  const [conflictWarning, setConflictWarning] = useState<string | null>(null);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [createdBatch, setCreatedBatch] = useState<any>(null);
+
+  // Get existing batches for conflict detection
+  const { data: batches = [] } = useQuery<Batch[]>({
+    queryKey: ["/api/batches"],
+  });
+
+  // Function to detect conflicts with existing batches
+  const checkForConflicts = (cutDate: string, workshopId: string) => {
+    if (!workshopId || !cutDate) return null;
+
+    const newCutDate = new Date(cutDate);
+    const workshopBatches = batches.filter(batch => 
+      batch.workshopId === parseInt(workshopId) && 
+      batch.status !== 'returned'
+    );
+
+    for (const batch of workshopBatches) {
+      if (batch.expectedReturnDate) {
+        const expectedReturn = new Date(batch.expectedReturnDate);
+        if (expectedReturn > newCutDate) {
+          return {
+            conflictingBatch: batch,
+            message: `Conflito detectado: Lote ${batch.code} tem retorno previsto para ${expectedReturn.toLocaleDateString('pt-BR')} (após a data de corte deste novo lote)`
+          };
+        }
+      }
+    }
+    return null;
+  };
   
   // Filter active products only (default to active if isActive field doesn't exist)
   const activeProducts = products.filter(product => product.isActive === 1 || product.isActive === undefined);
@@ -85,10 +118,11 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
       const response = await apiRequest('POST', '/api/batches', batchData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (newBatch) => {
       toast({ title: "Lote criado com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
-      onClose();
+      setCreatedBatch(newBatch);
+      setShowPrintDialog(true);
     },
     onError: () => {
       toast({ title: "Erro ao criar lote", variant: "destructive" });
@@ -96,7 +130,43 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
   });
 
   const onSubmit = (data: BatchFormData) => {
+    // Check for conflicts before creating
+    const conflict = checkForConflicts(data.cutDate, data.workshopId || "");
+    if (conflict) {
+      setConflictWarning(conflict.message);
+      return;
+    }
+    
+    setConflictWarning(null);
     createBatchMutation.mutate(data);
+  };
+
+  const handleConflictResolution = async (conflictingBatch: Batch, newCutDate: string) => {
+    try {
+      // Update the conflicting batch's expected return date to one day before new cut date
+      const newReturnDate = new Date(newCutDate);
+      newReturnDate.setDate(newReturnDate.getDate() - 1);
+      
+      await apiRequest('PATCH', `/api/batches/${conflictingBatch.id}`, {
+        expectedReturnDate: newReturnDate,
+        status: 'returned'
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
+      toast({ title: `Lote ${conflictingBatch.code} marcado como retornado para resolver conflito` });
+      
+      setConflictWarning(null);
+      
+      // Now create the new batch
+      const formData = form.getValues();
+      createBatchMutation.mutate(formData);
+    } catch (error) {
+      toast({ title: "Erro ao resolver conflito", variant: "destructive" });
+    }
+  };
+
+  const printBatch = () => {
+    window.print();
   };
 
   const getSelectedProduct = (productId: string) => {
