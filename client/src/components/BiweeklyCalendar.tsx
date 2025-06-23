@@ -1,0 +1,306 @@
+import { useState, useRef } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { format, startOfMonth, endOfMonth, addDays, addMonths, subMonths, differenceInDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import type { Batch, Product, Workshop } from "@shared/schema";
+
+interface BiweeklyCalendarProps {
+  batches: Batch[];
+  products: Product[];
+  workshops: Workshop[];
+  onBatchClick: (batch: Batch) => void;
+}
+
+export default function BiweeklyCalendar({ batches, products, workshops, onBatchClick }: BiweeklyCalendarProps) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFirstHalf, setIsFirstHalf] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+
+  // Determine current period (1-15 or 16-end of month)
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const midMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 15);
+  
+  const periodStart = isFirstHalf ? monthStart : addDays(midMonth, 1);
+  const periodEnd = isFirstHalf ? midMonth : monthEnd;
+  
+  // Calculate days in current period
+  const periodLength = differenceInDays(periodEnd, periodStart) + 1;
+  const viewDays = Array.from({ length: periodLength }, (_, i) => addDays(periodStart, i));
+
+  const previousPeriod = () => {
+    if (isFirstHalf) {
+      setCurrentDate(subMonths(currentDate, 1));
+      setIsFirstHalf(false);
+    } else {
+      setIsFirstHalf(true);
+    }
+  };
+  
+  const nextPeriod = () => {
+    if (isFirstHalf) {
+      setIsFirstHalf(false);
+    } else {
+      setCurrentDate(addMonths(currentDate, 1));
+      setIsFirstHalf(true);
+    }
+  };
+
+  // Touch/Mouse scroll handlers for period navigation
+  const handleStart = (clientX: number) => {
+    setIsDragging(true);
+    setStartX(clientX);
+    setDragOffset(0);
+  };
+
+  const handleMove = (clientX: number) => {
+    if (!isDragging) return;
+    
+    const deltaX = clientX - startX;
+    setDragOffset(deltaX);
+  };
+
+  const handleEnd = (clientX: number) => {
+    if (!isDragging) return;
+    
+    const deltaX = clientX - startX;
+    const threshold = 50;
+    
+    if (Math.abs(deltaX) > threshold) {
+      if (deltaX > 0) {
+        previousPeriod();
+      } else {
+        nextPeriod();
+      }
+    }
+    
+    setIsDragging(false);
+    setDragOffset(0);
+  };
+
+  // Mouse events
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleStart(e.clientX);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      e.preventDefault();
+      handleMove(e.clientX);
+    }
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (isDragging) {
+      handleEnd(e.clientX);
+    }
+  };
+
+  const handleMouseLeave = (e: React.MouseEvent) => {
+    if (isDragging) {
+      handleEnd(e.clientX);
+    }
+  };
+
+  // Touch events
+  const handleTouchStart = (e: React.TouchEvent) => {
+    handleStart(e.touches[0].clientX);
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDragging) {
+      e.preventDefault();
+      handleMove(e.touches[0].clientX);
+    }
+  };
+  
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (isDragging) {
+      const touch = e.changedTouches[0];
+      handleEnd(touch.clientX);
+    }
+  };
+
+  const getWorkshopColor = (workshopId: number | null) => {
+    if (!workshopId) return "#1E40AF"; // Internal production - blue-800
+    const workshop = workshops.find(w => w.id === workshopId);
+    return workshop?.color || "#6B7280";
+  };
+
+  const getWorkshopName = (workshopId: number | null) => {
+    if (!workshopId) return "Interno";
+    const workshop = workshops.find(w => w.id === workshopId);
+    return workshop?.name || "Oficina";
+  };
+
+  const getProductName = (productId: number) => {
+    const product = products.find(p => p.id === productId);
+    const name = product?.name || "Produto";
+    return name.length > 25 ? name.substring(0, 25) + "..." : name;
+  };
+
+  const getBatchPosition = (batch: Batch) => {
+    const cutDate = new Date(batch.cutDate);
+    // Use expectedReturnDate for schedule planning, otherwise default span
+    const returnDate = batch.expectedReturnDate
+      ? new Date(batch.expectedReturnDate)
+      : new Date(cutDate.getTime() + 1 * 24 * 60 * 60 * 1000); // Default 1 day from cut date
+    
+    // Calculate position relative to the first day in viewDays
+    const viewStart = viewDays[0];
+    const startCol = differenceInDays(cutDate, viewStart);
+    const endCol = differenceInDays(returnDate, viewStart);
+    
+    // Check if batch is visible in current view
+    if (endCol < 0 || startCol >= periodLength) return null;
+    
+    const adjustedStartCol = Math.max(0, startCol);
+    const adjustedEndCol = Math.min(periodLength - 1, endCol);
+    const span = adjustedEndCol - adjustedStartCol + 1;
+    
+    if (span <= 0) return null;
+    
+    return {
+      gridColumn: `${adjustedStartCol + 1} / span ${span}`,
+      visible: true
+    };
+  };
+
+  const visibleBatches = batches.filter(batch => {
+    // Hide returned batches from schedule
+    if (batch.status === 'returned') return false;
+    
+    const cutDate = new Date(batch.cutDate);
+    const endDate = batch.expectedReturnDate
+      ? new Date(batch.expectedReturnDate)
+      : new Date(cutDate.getTime() + 1 * 24 * 60 * 60 * 1000); // Default 1 day span
+    
+    // Check if batch overlaps with current period view
+    const periodStart = viewDays[0];
+    const periodEnd = viewDays[viewDays.length - 1];
+    
+    return (cutDate <= periodEnd && endDate >= periodStart);
+  }).sort((a, b) => {
+    // Sort by cut date
+    return new Date(a.cutDate).getTime() - new Date(b.cutDate).getTime();
+  });
+
+  const getPeriodTitle = () => {
+    const monthName = format(currentDate, "MMMM yyyy", { locale: ptBR });
+    const period = isFirstHalf ? "1ª Quinzena" : "2ª Quinzena";
+    return `${period} - ${monthName}`;
+  };
+
+  return (
+    <div className="w-full h-[80vh] bg-white rounded-lg shadow-sm border border-slate-200">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-slate-200">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={previousPeriod}
+            className="h-8 w-8"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          
+          <h2 className="text-lg font-semibold text-slate-800">
+            {getPeriodTitle()}
+          </h2>
+          
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={nextPeriod}
+            className="h-8 w-8"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Calendar Grid */}
+      <div 
+        className="p-4 h-full overflow-hidden"
+        ref={containerRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Day Headers */}
+        <div className={`grid gap-1 mb-2`} style={{ gridTemplateColumns: `repeat(${periodLength}, 1fr)` }}>
+          {viewDays.map((day, index) => (
+            <div key={index} className="text-center py-2 text-sm font-medium text-slate-600 bg-slate-50 rounded">
+              <div>{format(day, "dd", { locale: ptBR })}</div>
+              <div className="text-xs">{format(day, "EEE", { locale: ptBR })}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Batch Bars */}
+        <div className="relative space-y-1 overflow-y-auto" style={{ height: 'calc(100% - 80px)' }}>
+          {visibleBatches.length === 0 ? (
+            <div className="flex items-center justify-center h-32 text-slate-500">
+              Nenhum lote neste período
+            </div>
+          ) : (
+            visibleBatches.map((batch) => {
+              const position = getBatchPosition(batch);
+              if (!position) return null;
+              
+              const workshopColor = getWorkshopColor(batch.workshopId);
+              const workshopName = getWorkshopName(batch.workshopId);
+              const productName = batch.productId ? getProductName(batch.productId) : "Produto";
+              
+              return (
+                <div key={batch.id} className={`grid gap-1 min-h-[40px]`} style={{ gridTemplateColumns: `repeat(${periodLength}, 1fr)` }}>
+                  <div
+                    style={{ 
+                      gridColumn: position.gridColumn,
+                      backgroundColor: workshopColor 
+                    }}
+                    onClick={() => onBatchClick(batch)}
+                    className="rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center"
+                  >
+                    <div className="text-xs font-medium truncate">
+                      Lote {batch.code} • {workshopName} • <span className="italic opacity-80">{productName} (Qtd: {batch.quantity})</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Legend */}
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-blue-800 rounded"></div>
+              <span className="text-slate-600">Produção Interna</span>
+            </div>
+            {workshops.map((workshop) => (
+              <div key={workshop.id} className="flex items-center gap-2">
+                <div 
+                  className="w-3 h-3 rounded" 
+                  style={{ backgroundColor: workshop.color }}
+                ></div>
+                <span className="text-slate-600">{workshop.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

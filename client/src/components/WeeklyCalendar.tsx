@@ -1,32 +1,54 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { format, startOfWeek, addDays, addWeeks, subWeeks, differenceInDays, isWithinInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, addDays, addMonths, subMonths, differenceInDays, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Batch, Product, Workshop } from "@shared/schema";
 
-interface WeeklyCalendarProps {
+interface BiweeklyCalendarProps {
   batches: Batch[];
   products: Product[];
   workshops: Workshop[];
   onBatchClick: (batch: Batch) => void;
 }
 
-export default function WeeklyCalendar({ batches, products, workshops, onBatchClick }: WeeklyCalendarProps) {
+export default function WeeklyCalendar({ batches, products, workshops, onBatchClick }: BiweeklyCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFirstHalf, setIsFirstHalf] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
 
-  // Show 7 days starting from current week's Sunday
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
-  const viewDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Determine current period (1-15 or 16-end of month)
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const midMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 15);
+  
+  const periodStart = isFirstHalf ? monthStart : addDays(midMonth, 1);
+  const periodEnd = isFirstHalf ? midMonth : monthEnd;
+  
+  // Calculate days in current period
+  const periodLength = differenceInDays(periodEnd, periodStart) + 1;
+  const viewDays = Array.from({ length: periodLength }, (_, i) => addDays(periodStart, i));
 
-  const previousWeek = () => setCurrentDate(subWeeks(currentDate, 1));
-  const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
-  const previousDay = () => setCurrentDate(addDays(currentDate, -1));
-  const nextDay = () => setCurrentDate(addDays(currentDate, 1));
+  const previousPeriod = () => {
+    if (isFirstHalf) {
+      setCurrentDate(subMonths(currentDate, 1));
+      setIsFirstHalf(false);
+    } else {
+      setIsFirstHalf(true);
+    }
+  };
+  
+  const nextPeriod = () => {
+    if (isFirstHalf) {
+      setIsFirstHalf(false);
+    } else {
+      setCurrentDate(addMonths(currentDate, 1));
+      setIsFirstHalf(true);
+    }
+  };
 
   // Touch/Mouse scroll handlers for smooth daily navigation
   const handleStart = (clientX: number) => {

@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
-import WeeklyCalendar from "@/components/WeeklyCalendar";
+import BiweeklyCalendar from "@/components/BiweeklyCalendar";
 import BatchModal from "@/components/BatchModal";
 import BatchForm from "@/components/BatchForm";
 import BatchList from "@/components/BatchList";
@@ -70,7 +70,7 @@ export default function Dashboard() {
           </Button>
         </div>
         
-        <WeeklyCalendar 
+        <BiweeklyCalendar 
           batches={batches} 
           products={products}
           workshops={workshops}
