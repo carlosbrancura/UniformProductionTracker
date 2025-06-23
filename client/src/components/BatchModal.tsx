@@ -3,12 +3,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Camera, Edit, Trash2, CheckCircle } from "lucide-react";
+import { X, Camera, Edit, Trash2, CheckCircle, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SimpleBatchEdit from "./SimpleBatchEdit";
+import BatchPrintLayout from "./BatchPrintLayout";
 import type { Batch, Product, Workshop, BatchHistory, User } from "@shared/schema";
 
 interface BatchModalProps {

@@ -14,6 +14,7 @@ import { Plus, Trash2, AlertTriangle, Printer } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Product, Workshop, Batch } from "@shared/schema";
+import BatchPrintLayout from "./BatchPrintLayout";
 
 interface BatchFormProps {
   products: Product[];
@@ -179,6 +180,38 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
         <DialogHeader>
           <DialogTitle>Novo Lote de Produção</DialogTitle>
         </DialogHeader>
+
+        {conflictWarning && (
+          <Alert className="border-orange-200 bg-orange-50">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+              {conflictWarning}
+              <div className="mt-2 flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    const conflict = checkForConflicts(form.getValues().cutDate, form.getValues().workshopId || "");
+                    if (conflict) {
+                      handleConflictResolution(conflict.conflictingBatch, form.getValues().cutDate);
+                    }
+                  }}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  Marcar lote anterior como retornado
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConflictWarning(null)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -410,6 +443,54 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
           </div>
         </form>
       </DialogContent>
+      
+      {/* Print Dialog */}
+      {showPrintDialog && createdBatch && (
+        <Dialog open={showPrintDialog} onOpenChange={() => {
+          setShowPrintDialog(false);
+          onClose();
+        }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Lote Criado com Sucesso!</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p>O lote {createdBatch.code} foi criado. Deseja imprimir a ficha de produção?</p>
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowPrintDialog(false);
+                    onClose();
+                  }}
+                >
+                  Não imprimir
+                </Button>
+                <Button
+                  onClick={() => {
+                    printBatch();
+                    setShowPrintDialog(false);
+                    onClose();
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+      
+      {/* Hidden Print Layout */}
+      {createdBatch && (
+        <BatchPrintLayout 
+          batch={createdBatch} 
+          products={products} 
+          workshops={workshops} 
+        />
+      )}
     </Dialog>
   );
 }
