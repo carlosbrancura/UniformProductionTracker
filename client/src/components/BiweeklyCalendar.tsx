@@ -348,6 +348,9 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
                         }`}
                       >
                         <div className="text-xs font-medium truncate">
+                          {batch.status === 'returned' && (
+                            <span className="bg-white text-gray-600 px-1 rounded text-xs mr-1 font-bold">RETORNADO</span>
+                          )}
                           Lote {batch.code} • {workshopName} • <span className="italic opacity-80">{productName} (Qtd: {batch.quantity})</span>
                         </div>
                       </div>

@@ -24,20 +24,20 @@ export default function BatchPrintLayout({ batch, products, workshops }: BatchPr
   };
 
   const SingleCopy = () => (
-    <div className="w-full h-1/2 p-4 border-b border-gray-300 print:border-black">
+    <div className="w-full h-1/2 p-6 border-b-2 border-gray-400 print:border-black">
       {/* Header Section */}
-      <div className="flex items-start gap-4 mb-4">
+      <div className="flex items-start gap-6 mb-6">
         {/* Batch Code Box */}
-        <div className="bg-blue-600 text-white p-3 rounded-lg font-bold text-lg min-w-[100px] text-center">
+        <div className="batch-code bg-blue-600 text-white p-6 rounded-lg font-bold text-3xl min-w-[150px] text-center shadow-lg">
           Lote {batch.code}
         </div>
         
         {/* Workshop and Dates */}
         <div className="flex-1">
-          <div className="text-lg font-semibold mb-1">
+          <div className="workshop-title text-2xl font-bold mb-3 text-gray-800">
             Oficina: {getWorkshopName(batch.workshopId)}
           </div>
-          <div className="flex gap-6 text-sm">
+          <div className="date-info flex gap-8 text-lg font-medium">
             <span>Data Corte: {formatDate(batch.cutDate)}</span>
             {batch.expectedReturnDate && (
               <span>Data Prevista Retorno: {formatDate(batch.expectedReturnDate)}</span>
@@ -47,26 +47,26 @@ export default function BatchPrintLayout({ batch, products, workshops }: BatchPr
       </div>
 
       {/* Products Section */}
-      <div className="mb-4">
-        <h3 className="font-semibold mb-2 text-gray-800">Produtos:</h3>
-        <div className="space-y-2">
+      <div className="mb-6">
+        <h3 className="font-bold mb-4 text-xl text-gray-800">Produtos:</h3>
+        <div className="space-y-3">
           {batch.products?.map((batchProduct: any, index: number) => (
-            <div key={index} className="flex justify-between items-center py-1 border-b border-gray-200">
-              <span className="font-medium">{getProductName(batchProduct.productId)}</span>
-              <div className="flex gap-4 text-sm">
+            <div key={index} className="flex justify-between items-center py-2 border-b-2 border-gray-300">
+              <span className="product-name font-bold text-lg">{getProductName(batchProduct.productId)}</span>
+              <div className="product-details flex gap-6 text-base font-medium">
                 <span>Qtd: {batchProduct.quantity}</span>
                 <span>Cor: {batchProduct.selectedColor}</span>
                 <span>Tamanho: {batchProduct.selectedSize}</span>
               </div>
             </div>
           )) || (
-            <div className="text-gray-500 italic">Nenhum produto especificado</div>
+            <div className="text-gray-500 italic text-lg">Nenhum produto especificado</div>
           )}
         </div>
       </div>
 
       {/* Additional Information */}
-      <div className="space-y-2 text-sm">
+      <div className="space-y-3 text-lg">
         <div>
           <strong>Status:</strong> {batch.status === 'cut' ? 'Cortado' : 
                                   batch.status === 'in_production' ? 'Em Produção' : 
@@ -79,8 +79,8 @@ export default function BatchPrintLayout({ batch, products, workshops }: BatchPr
           </div>
         )}
         
-        <div className="mt-4 pt-2 border-t border-gray-200">
-          <div className="flex justify-between text-xs text-gray-600">
+        <div className="mt-6 pt-3 border-t-2 border-gray-300">
+          <div className="flex justify-between text-base text-gray-600 font-medium">
             <span>Data de Impressão: {new Date().toLocaleDateString('pt-BR')}</span>
             <span>Sistema de Controle de Produção</span>
           </div>
@@ -95,6 +95,7 @@ export default function BatchPrintLayout({ batch, products, workshops }: BatchPr
         @media print {
           .print-only {
             display: block !important;
+            font-size: 18px !important;
           }
           body * {
             visibility: hidden;
@@ -110,6 +111,25 @@ export default function BatchPrintLayout({ batch, products, workshops }: BatchPr
             height: 100% !important;
             margin: 0;
             padding: 0;
+          }
+          .print-only h3 {
+            font-size: 22px !important;
+          }
+          .print-only .batch-code {
+            font-size: 36px !important;
+            padding: 20px !important;
+          }
+          .print-only .workshop-title {
+            font-size: 24px !important;
+          }
+          .print-only .date-info {
+            font-size: 20px !important;
+          }
+          .print-only .product-name {
+            font-size: 20px !important;
+          }
+          .print-only .product-details {
+            font-size: 18px !important;
           }
           @page {
             size: A4;
