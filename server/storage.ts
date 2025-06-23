@@ -303,7 +303,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllBatches(): Promise<Batch[]> {
-    return await db.select().from(batches);
+    // Get all batches with their first product for display purposes
+    const batchesWithProducts = await db
+      .select({
+        id: batches.id,
+        code: batches.code,
+        cutDate: batches.cutDate,
+        status: batches.status,
+        workshopId: batches.workshopId,
+        sentToProductionDate: batches.sentToProductionDate,
+        expectedReturnDate: batches.expectedReturnDate,
+        actualReturnDate: batches.actualReturnDate,
+        conferenceResult: batches.conferenceResult,
+        observations: batches.observations,
+        imageUrl: batches.imageUrl,
+        productId: batchProducts.productId,
+        quantity: batchProducts.quantity,
+      })
+      .from(batches)
+      .leftJoin(batchProducts, eq(batches.id, batchProducts.batchId))
+      .orderBy(desc(batches.id));
+
+    // Group by batch ID and take the first product for each batch
+    const batchMap = new Map();
+    for (const row of batchesWithProducts) {
+      if (!batchMap.has(row.id)) {
+        batchMap.set(row.id, row);
+      }
+    }
+
+    return Array.from(batchMap.values());
   }
 
   async createBatch(batchData: any): Promise<Batch> {

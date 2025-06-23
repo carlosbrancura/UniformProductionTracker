@@ -134,14 +134,12 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
 
   const getBatchPosition = (batch: Batch) => {
     const cutDate = new Date(batch.cutDate);
-    // Use actualReturnDate if available, otherwise expectedReturnDate, otherwise don't show
+    // Use actualReturnDate if available, otherwise expectedReturnDate, otherwise default span
     const returnDate = batch.actualReturnDate 
       ? new Date(batch.actualReturnDate)
       : batch.expectedReturnDate
         ? new Date(batch.expectedReturnDate)
-        : null;
-    
-    if (!returnDate) return null; // Don't show batches without return dates
+        : new Date(cutDate.getTime() + 7 * 24 * 60 * 60 * 1000); // Default 7 days from cut date
     
     // Calculate position relative to the first day in viewDays
     const viewStart = viewDays[0];
