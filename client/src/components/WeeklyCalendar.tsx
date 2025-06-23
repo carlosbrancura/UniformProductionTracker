@@ -139,7 +139,7 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
       ? new Date(batch.actualReturnDate)
       : batch.expectedReturnDate
         ? new Date(batch.expectedReturnDate)
-        : new Date(cutDate.getTime() + 7 * 24 * 60 * 60 * 1000); // Default 7 days from cut date
+        : new Date(cutDate.getTime() + 1 * 24 * 60 * 60 * 1000); // Default 1 day from cut date
     
     // Calculate position relative to the first day in viewDays
     const viewStart = viewDays[0];
@@ -168,7 +168,7 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
       ? new Date(batch.actualReturnDate)
       : batch.expectedReturnDate
         ? new Date(batch.expectedReturnDate)
-        : new Date(cutDate.getTime() + 7 * 24 * 60 * 60 * 1000); // Default 7 days span
+        : new Date(cutDate.getTime() + 1 * 24 * 60 * 60 * 1000); // Default 1 day span
     
     // Check if batch overlaps with current week view
     const weekStart = viewDays[0];

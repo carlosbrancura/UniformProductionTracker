@@ -125,11 +125,11 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
             </div>
 
             <div>
-              <Label htmlFor="actualReturnDate">Data de Retorno</Label>
+              <Label htmlFor="expectedReturnDate">Data Prevista de Retorno</Label>
               <Input
-                id="actualReturnDate"
+                id="expectedReturnDate"
                 type="date"
-                {...form.register("actualReturnDate")}
+                {...form.register("expectedReturnDate")}
               />
             </div>
           </div>
