@@ -134,12 +134,10 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
 
   const getBatchPosition = (batch: Batch) => {
     const cutDate = new Date(batch.cutDate);
-    // Use actualReturnDate if available, otherwise expectedReturnDate, otherwise default span
-    const returnDate = batch.actualReturnDate 
-      ? new Date(batch.actualReturnDate)
-      : batch.expectedReturnDate
-        ? new Date(batch.expectedReturnDate)
-        : new Date(cutDate.getTime() + 1 * 24 * 60 * 60 * 1000); // Default 1 day from cut date
+    // Use expectedReturnDate for schedule planning, otherwise default span
+    const returnDate = batch.expectedReturnDate
+      ? new Date(batch.expectedReturnDate)
+      : new Date(cutDate.getTime() + 1 * 24 * 60 * 60 * 1000); // Default 1 day from cut date
     
     // Calculate position relative to the first day in viewDays
     const viewStart = viewDays[0];
@@ -162,13 +160,13 @@ export default function WeeklyCalendar({ batches, products, workshops, onBatchCl
   };
 
   const visibleBatches = batches.filter(batch => {
-    // Don't hide returned batches, show all batches for testing
+    // Hide returned batches from schedule
+    if (batch.status === 'returned') return false;
+    
     const cutDate = new Date(batch.cutDate);
-    const endDate = batch.actualReturnDate 
-      ? new Date(batch.actualReturnDate)
-      : batch.expectedReturnDate
-        ? new Date(batch.expectedReturnDate)
-        : new Date(cutDate.getTime() + 1 * 24 * 60 * 60 * 1000); // Default 1 day span
+    const endDate = batch.expectedReturnDate
+      ? new Date(batch.expectedReturnDate)
+      : new Date(cutDate.getTime() + 1 * 24 * 60 * 60 * 1000); // Default 1 day span
     
     // Check if batch overlaps with current week view
     const weekStart = viewDays[0];
