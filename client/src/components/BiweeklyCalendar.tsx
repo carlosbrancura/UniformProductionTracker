@@ -210,9 +210,23 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
     const overlaps = (cutDate <= periodEnd && endDate >= periodStart);
     
     return overlaps;
-  }).sort((a, b) => {
-    // Sort by cut date
-    return new Date(a.cutDate).getTime() - new Date(b.cutDate).getTime();
+  });
+
+  // Group batches by workshop for same-line display
+  const batchesByWorkshop = visibleBatches.reduce((acc, batch) => {
+    const workshopId = batch.workshopId || 0; // Use 0 for internal production
+    if (!acc[workshopId]) {
+      acc[workshopId] = [];
+    }
+    acc[workshopId].push(batch);
+    return acc;
+  }, {} as Record<number, Batch[]>);
+
+  // Sort batches within each workshop by cut date
+  Object.keys(batchesByWorkshop).forEach(workshopId => {
+    batchesByWorkshop[parseInt(workshopId)].sort((a, b) => {
+      return new Date(a.cutDate).getTime() - new Date(b.cutDate).getTime();
+    });
   });
 
   const getPeriodTitle = () => {
@@ -226,7 +240,7 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
   };
 
   return (
-    <div className="w-full h-[80vh] bg-white rounded-lg shadow-sm border border-slate-200">
+    <div className="w-full h-screen bg-white">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-slate-200">
         <div className="flex items-center gap-2">
@@ -298,61 +312,44 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
           })}
         </div>
 
-        {/* Today Column Background */}
-        {viewDays.some(day => isSameDay(day, today)) && (
-          <div 
-            className="absolute inset-0 pointer-events-none"
-            style={{ 
-              top: '80px', // Below headers
-              bottom: '80px' // Above legend
-            }}
-          >
-            <div 
-              className={`grid gap-1 h-full`} 
-              style={{ gridTemplateColumns: `repeat(${periodLength}, 1fr)` }}
-            >
-              {viewDays.map((day, index) => {
-                const isToday = isSameDay(day, today);
-                return (
-                  <div 
-                    key={index}
-                    className={isToday ? "bg-slate-50/50" : ""}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        )}
 
-        {/* Batch Bars */}
+
+        {/* Batch Bars - Grouped by Workshop */}
         <div className="relative space-y-1 overflow-y-auto" style={{ height: 'calc(100% - 80px)' }}>
-          {visibleBatches.length === 0 ? (
+          {Object.keys(batchesByWorkshop).length === 0 ? (
             <div className="flex items-center justify-center h-32 text-slate-500">
               Nenhum lote neste período
             </div>
           ) : (
-            visibleBatches.map((batch) => {
-              const position = getBatchPosition(batch);
-              if (!position) return null;
-              
-              const workshopColor = getWorkshopColor(batch.workshopId);
-              const workshopName = getWorkshopName(batch.workshopId);
-              const productName = batch.productId ? getProductName(batch.productId) : "Produto";
+            Object.entries(batchesByWorkshop).map(([workshopId, workshopBatches]) => {
+              const id = parseInt(workshopId);
+              const workshopColor = getWorkshopColor(id === 0 ? null : id);
+              const workshopName = getWorkshopName(id === 0 ? null : id);
               
               return (
-                <div key={batch.id} className={`grid gap-1 min-h-[40px] relative z-10`} style={{ gridTemplateColumns: `repeat(${periodLength}, 1fr)` }}>
-                  <div
-                    style={{ 
-                      gridColumn: position.gridColumn,
-                      backgroundColor: workshopColor 
-                    }}
-                    onClick={() => onBatchClick(batch)}
-                    className="rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center"
-                  >
-                    <div className="text-xs font-medium truncate">
-                      Lote {batch.code} • {workshopName} • <span className="italic opacity-80">{productName} (Qtd: {batch.quantity})</span>
-                    </div>
-                  </div>
+                <div key={workshopId} className={`grid gap-1 min-h-[40px] relative z-10`} style={{ gridTemplateColumns: `repeat(${periodLength}, 1fr)` }}>
+                  {workshopBatches.map((batch) => {
+                    const position = getBatchPosition(batch);
+                    if (!position) return null;
+                    
+                    const productName = batch.productId ? getProductName(batch.productId) : "Produto";
+                    
+                    return (
+                      <div
+                        key={batch.id}
+                        style={{ 
+                          gridColumn: position.gridColumn,
+                          backgroundColor: workshopColor 
+                        }}
+                        onClick={() => onBatchClick(batch)}
+                        className="rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center"
+                      >
+                        <div className="text-xs font-medium truncate">
+                          Lote {batch.code} • {workshopName} • <span className="italic opacity-80">{productName} (Qtd: {batch.quantity})</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })
