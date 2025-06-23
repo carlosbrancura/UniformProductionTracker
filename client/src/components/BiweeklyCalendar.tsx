@@ -270,8 +270,6 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
               const workshopName = getWorkshopName(batch.workshopId);
               const productName = batch.productId ? getProductName(batch.productId) : "Produto";
               
-
-              
               return (
                 <div key={batch.id} className={`grid gap-1 min-h-[40px]`} style={{ gridTemplateColumns: `repeat(${periodLength}, 1fr)` }}>
                   <div
