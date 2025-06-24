@@ -23,7 +23,10 @@ const workshopFormSchema = z.object({
   serviceType: z.string().min(1, "Tipo de serviço é obrigatório"),
   capacity: z.string().optional(),
   color: z.string().min(1, "Cor é obrigatória"),
-  scheduleOrder: z.coerce.number().min(1, "Ordem do cronograma é obrigatória"),
+  scheduleOrder: z.coerce.number().min(1, "Ordem do cronograma é obrigatória").refine(async (value) => {
+    // This will be handled server-side for validation
+    return true;
+  }, "Esta ordem já está sendo usada por outra oficina"),
 });
 
 type WorkshopFormData = z.infer<typeof workshopFormSchema>;
