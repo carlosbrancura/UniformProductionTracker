@@ -114,6 +114,7 @@ This is a full-stack production management system designed for textile and garme
 - **Start Command**: `npm run start`
 
 ## Changelog
+- June 24, 2025: Monthly view disabled - system now only shows quinzenal (15-day) calendar view per user request
 - June 24, 2025: Unified calendar component - removed duplicate BiweeklyCalendar, single OrganizedCalendar now handles both quinzenal and monthly views
 - June 24, 2025: Print confirmation dialog added after batch creation - user can choose whether to print or not
 - June 24, 2025: Calendar layout improvements - bars positioned side-by-side, reduced spacing, enhanced information display, monthly view added
