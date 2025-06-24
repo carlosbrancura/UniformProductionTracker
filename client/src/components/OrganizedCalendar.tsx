@@ -40,7 +40,27 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
 
   const navigatePeriod = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
-    newDate.setDate(currentDate.getDate() + (direction === 'next' ? 14 : -14));
+    const dayOfMonth = currentDate.getDate();
+    
+    if (direction === 'next') {
+      if (dayOfMonth <= 15) {
+        // Move from 1st-15th to 16th-end
+        newDate.setDate(16);
+      } else {
+        // Move to next month, 1st-15th
+        newDate.setMonth(newDate.getMonth() + 1);
+        newDate.setDate(1);
+      }
+    } else {
+      if (dayOfMonth <= 15) {
+        // Move to previous month, 16th-end
+        newDate.setMonth(newDate.getMonth() - 1);
+        newDate.setDate(16);
+      } else {
+        // Move from 16th-end to 1st-15th
+        newDate.setDate(1);
+      }
+    }
     setCurrentDate(newDate);
   };
 
@@ -154,8 +174,9 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                   className="relative"
                   style={{ 
                     borderBottom: workshopIndex < sortedWorkshops.length - 1 ? '1px dotted #d1d5db' : 'none',
-                    paddingBottom: workshopIndex < sortedWorkshops.length - 1 ? '16px' : '0',
-                    minHeight: '60px' // Fixed height even if no batches
+                    paddingBottom: workshopIndex < sortedWorkshops.length - 1 ? '8px' : '0',
+                    marginBottom: workshopIndex < sortedWorkshops.length - 1 ? '8px' : '0',
+                    minHeight: '45px' // Reduced height for more workshops on screen
                   }}
                 >
                   {/* Grid background for reference */}
@@ -163,7 +184,7 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                     className="grid gap-1"
                     style={{ 
                       gridTemplateColumns: 'repeat(14, 1fr)',
-                      height: '60px'
+                      height: '45px'
                     }}
                   >
                     {/* Invisible grid cells for structure */}
@@ -177,24 +198,31 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                     const position = getBatchPosition(batch);
                     if (!position) return null;
                     
+                    const startCol = parseInt(position.gridColumn.split(' ')[0]);
+                    const span = position.gridColumn.includes('span') ? parseInt(position.gridColumn.split('span ')[1]) : 1;
+                    const leftPercent = ((startCol - 1) / 14) * 100;
+                    const widthPercent = (span / 14) * 100;
+                    
                     return (
                       <div
                         key={batch.id}
-                        className="absolute top-0 rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center h-[50px]"
+                        className="absolute top-1 rounded-lg p-1 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center h-[40px] border border-white border-opacity-20"
                         style={{ 
-                          gridColumn: position.gridColumn,
                           backgroundColor: workshop.color,
                           opacity: batch.status === 'returned' ? 0.5 : 1,
-                          left: `${((position.gridColumn.split(' ')[0] - 1) / 14) * 100}%`,
-                          width: `${(position.gridColumn.includes('span') ? parseInt(position.gridColumn.split('span ')[1]) : 1) * (100/14)}%`
+                          left: `calc(${leftPercent}% + 2px)`,
+                          width: `calc(${widthPercent}% - 4px)`,
+                          margin: '1px'
                         }}
                         onClick={() => onBatchClick(batch)}
                       >
-                        <div className="text-xs font-medium truncate w-full">
+                        <div className="text-xs font-medium truncate w-full flex items-center">
                           {batch.status === 'returned' && (
-                            <span className="bg-white text-gray-600 px-1 rounded text-xs mr-1 font-bold">RETORNADO</span>
+                            <span className="bg-white text-gray-600 px-1 rounded text-xs mr-1 font-bold">RET</span>
                           )}
-                          Lote {batch.code}
+                          <span className="truncate">
+                            Lote {batch.code} | {workshop.name} | {batch.productId ? getProductName(batch.productId).substring(0, 15) + (getProductName(batch.productId).length > 15 ? '...' : '') : 'Múltiplos'}
+                          </span>
                         </div>
                       </div>
                     );

@@ -114,7 +114,8 @@ This is a full-stack production management system designed for textile and garme
 - **Start Command**: `npm run start`
 
 ## Changelog
-- June 23, 2025. Initial setup
+- June 24, 2025: Calendar layout improvements - bars positioned side-by-side, reduced spacing, enhanced information display
+- June 23, 2025: Initial setup
 
 ## User Preferences
 
