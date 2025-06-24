@@ -111,6 +111,47 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
               </div>
             </div>
           </div>
+
+          <!-- Linha divisória -->
+          <div class="separator-line" style="width: 100%;"></div>
+
+          <!-- Segunda Via - Produção -->
+          <div style="padding: 24px; min-height: 48vh;">
+            <div style="display: flex; align-items: flex-start; gap: 24px; margin-bottom: 24px;">
+              <div class="batch-header" style="color: white; padding: 16px; font-weight: bold; font-size: 24px; min-width: 120px; text-align: center;">
+                LOTE ${batch.code}
+              </div>
+              <div style="flex: 1;">
+                <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">
+                  Oficina: ${workshopName}
+                </div>
+                <div style="font-size: 16px;">
+                  Data Corte: ${new Date(batch.cutDate).toLocaleDateString('pt-BR')} - Entrega Prevista: ${batch.expectedReturnDate ? new Date(batch.expectedReturnDate).toLocaleDateString('pt-BR') : 'Não definida'}
+                </div>
+              </div>
+            </div>
+            <div style="margin-bottom: 32px;">
+              <div class="separator-line" style="font-size: 18px; font-weight: bold; margin-bottom: 12px; padding-bottom: 4px;">Produtos</div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 16px;">
+                  <span style="flex: 1;">Produto: Em desenvolvimento</span>
+                  <span style="width: 80px; text-align: center;">Quant: <strong>-</strong></span>
+                  <span style="width: 80px; text-align: center;">Cor: <strong>-</strong></span>
+                  <span style="width: 64px; text-align: center;">Tam: <strong>-</strong></span>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top: auto;">
+              <div class="separator-line" style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; padding-top: 8px;">
+                <div>Status: Em produção</div>
+                <div>2ª via Produção</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-top: 8px;">
+                <div>Data de Impressão: ${new Date().toLocaleDateString('pt-BR')}</div>
+                <div>Sistema de Controle de Produção</div>
+              </div>
+            </div>
+          </div>
         </body>
       </html>
     `;
@@ -186,10 +227,10 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
   const createBatchMutation = useMutation({
     mutationFn: async (data: BatchFormData) => {
       const batchData = {
-        cutDate: data.cutDate + 'T00:00:00.000Z',
+        cutDate: data.cutDate,
         status: data.status,
         workshopId: data.workshopId ? parseInt(data.workshopId) : null,
-        expectedReturnDate: data.expectedReturnDate ? data.expectedReturnDate + 'T00:00:00.000Z' : null,
+        expectedReturnDate: data.expectedReturnDate || null,
         observations: data.observations,
         products: data.products.map(p => ({
           productId: parseInt(p.productId),
