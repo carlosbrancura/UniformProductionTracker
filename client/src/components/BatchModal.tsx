@@ -137,6 +137,10 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     
+    // Get workshop info for print
+    const workshopInfo = workshops.find(w => w.id === batch.workshopId);
+    const workshopName = workshopInfo?.name || 'Produção Interna';
+    
     // Create the print content using our BatchPrintLayout component
     const printContent = `
       <!DOCTYPE html>
