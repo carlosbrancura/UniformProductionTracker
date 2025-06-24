@@ -132,14 +132,21 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
     }
   };
 
-  const handlePrint = () => {
-    // Open a new window with just the print layout
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    
-    // Get workshop info for print
-    const workshopInfo = workshops.find(w => w.id === batch.workshopId);
-    const workshopName = workshopInfo?.name || 'Produção Interna';
+  const handlePrint = async () => {
+    try {
+      // Fetch batch products for printing
+      const batchProductsRes = await fetch(`/api/batch-products/${batch.id}`);
+      const fetchedBatchProducts = batchProductsRes.ok ? await batchProductsRes.json() : [];
+      
+      console.log('BatchModal - Fetched batch products for print:', fetchedBatchProducts);
+      
+      // Open a new window with just the print layout
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+      
+      // Get workshop info for print
+      const workshopInfo = workshops.find(w => w.id === batch.workshopId);
+      const workshopName = workshopInfo?.name || 'Produção Interna';
     
     // Create the print content using our BatchPrintLayout component
     const printContent = `
@@ -191,7 +198,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
             <div style="margin-bottom: 32px;">
               <div class="separator-line" style="font-size: 16px; font-weight: bold; margin-bottom: 12px; padding-bottom: 4px;">Produtos</div>
               <div style="display: flex; flex-direction: column; gap: 8px;">
-                ${batchProducts.map((bp: any) => {
+                ${fetchedBatchProducts.map((bp: any) => {
                   const product = products.find(p => p.id === bp.productId);
                   return `
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 16px;">
@@ -248,7 +255,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
             <div style="margin-bottom: 32px;">
               <div class="separator-line" style="font-size: 18px; font-weight: bold; margin-bottom: 12px; padding-bottom: 4px;">Produtos</div>
               <div style="display: flex; flex-direction: column; gap: 8px;">
-                ${batchProducts.map((bp: any) => {
+                ${fetchedBatchProducts.map((bp: any) => {
                   const product = products.find(p => p.id === bp.productId);
                   return `
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 16px;">
