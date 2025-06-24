@@ -148,41 +148,71 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
             
             return (
               <div key={workshop.id} className="relative">
-
-                {/* Fixed Batch Grid for this Workshop */}
+                {/* Workshop Label */}
                 <div 
-                  className="grid gap-1 relative"
+                  className="text-sm font-medium mb-2 px-2 py-1 rounded inline-block"
+                  style={{ backgroundColor: `${workshop.color}20`, color: workshop.color }}
+                >
+                  {workshop.name}
+                </div>
+
+                {/* Fixed Batch Grid for this Workshop - Single Row Layout */}
+                <div 
+                  className="relative"
                   style={{ 
-                    gridTemplateColumns: 'repeat(14, 1fr)',
                     borderBottom: workshopIndex < sortedWorkshops.length - 1 ? '1px dotted #d1d5db' : 'none',
                     paddingBottom: workshopIndex < sortedWorkshops.length - 1 ? '16px' : '0',
                     minHeight: '60px' // Fixed height even if no batches
                   }}
                 >
-                  {workshopBatches.map((batch) => {
-                    const position = getBatchPosition(batch);
-                    if (!position) return null;
-                    
-                    return (
-                      <div
-                        key={batch.id}
-                        style={{ 
-                          gridColumn: position.gridColumn,
-                          backgroundColor: workshop.color,
-                          opacity: batch.status === 'returned' ? 0.5 : 1
-                        }}
-                        onClick={() => onBatchClick(batch)}
-                        className="rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center min-h-[50px]"
-                      >
-                        <div className="text-xs font-medium truncate">
-                          {batch.status === 'returned' && (
-                            <span className="bg-white text-gray-600 px-1 rounded text-xs mr-1 font-bold">RETORNADO</span>
-                          )}
-                          Lote {batch.code} • <span className="italic opacity-80">{batch.productId ? getProductName(batch.productId) : 'Múltiplos produtos'} (Qtd: {batch.quantity || 'N/A'})</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {/* Calendar Grid Background */}
+                  <div 
+                    className="grid gap-1"
+                    style={{ 
+                      gridTemplateColumns: 'repeat(14, 1fr)',
+                      height: '50px'
+                    }}
+                  >
+                    {/* Empty grid cells for reference */}
+                    {Array.from({ length: 14 }).map((_, index) => (
+                      <div key={index} className="border-r border-gray-100 last:border-r-0"></div>
+                    ))}
+                  </div>
+                  
+                  {/* Overlay batches on top */}
+                  <div className="absolute inset-0">
+                    <div 
+                      className="grid gap-1 h-full"
+                      style={{ 
+                        gridTemplateColumns: 'repeat(14, 1fr)'
+                      }}
+                    >
+                      {workshopBatches.map((batch) => {
+                        const position = getBatchPosition(batch);
+                        if (!position) return null;
+                        
+                        return (
+                          <div
+                            key={batch.id}
+                            style={{ 
+                              gridColumn: position.gridColumn,
+                              backgroundColor: workshop.color,
+                              opacity: batch.status === 'returned' ? 0.5 : 1
+                            }}
+                            onClick={() => onBatchClick(batch)}
+                            className="rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center h-[50px]"
+                          >
+                            <div className="text-xs font-medium truncate w-full">
+                              {batch.status === 'returned' && (
+                                <span className="bg-white text-gray-600 px-1 rounded text-xs mr-1 font-bold">RETORNADO</span>
+                              )}
+                              Lote {batch.code}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             );
