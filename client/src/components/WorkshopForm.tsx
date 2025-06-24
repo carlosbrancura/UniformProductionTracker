@@ -23,6 +23,7 @@ const workshopFormSchema = z.object({
   serviceType: z.string().min(1, "Tipo de serviço é obrigatório"),
   capacity: z.string().optional(),
   color: z.string().min(1, "Cor é obrigatória"),
+  scheduleOrder: z.coerce.number().min(1, "Ordem do cronograma é obrigatória"),
 });
 
 type WorkshopFormData = z.infer<typeof workshopFormSchema>;

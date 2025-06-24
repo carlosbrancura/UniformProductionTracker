@@ -95,7 +95,9 @@ export default function BatchPrintLayout({ batch, products, workshops }: BatchPr
         @media print {
           .print-only {
             display: block !important;
-            font-size: 18px !important;
+            font-size: 20px !important;
+            width: 2480px !important;
+            height: 3508px !important;
           }
           body * {
             visibility: hidden;
@@ -107,33 +109,33 @@ export default function BatchPrintLayout({ batch, products, workshops }: BatchPr
             position: absolute;
             left: 0;
             top: 0;
-            width: 100% !important;
-            height: 100% !important;
             margin: 0;
             padding: 0;
           }
-          .print-only h3 {
-            font-size: 22px !important;
-          }
           .print-only .batch-code {
-            font-size: 36px !important;
-            padding: 20px !important;
+            font-size: 60px !important;
+            background-color: black !important;
+            color: white !important;
+            padding: 48px !important;
           }
           .print-only .workshop-title {
-            font-size: 24px !important;
+            font-size: 40px !important;
           }
           .print-only .date-info {
-            font-size: 20px !important;
+            font-size: 24px !important;
           }
           .print-only .product-name {
-            font-size: 20px !important;
+            font-size: 24px !important;
           }
           .print-only .product-details {
-            font-size: 18px !important;
+            font-size: 20px !important;
+          }
+          .print-only h3 {
+            font-size: 30px !important;
           }
           @page {
             size: A4;
-            margin: 1cm;
+            margin: 0;
           }
         }
         .print-only {
@@ -141,11 +143,11 @@ export default function BatchPrintLayout({ batch, products, workshops }: BatchPr
         }
       `}</style>
       
-      {/* First Copy */}
-      <SingleCopy />
+      {/* Via 1 Oficina */}
+      <SingleCopy copyLabel="Via 1 Oficina" />
       
-      {/* Second Copy */}
-      <SingleCopy />
+      {/* Via 2 Produção */}
+      <SingleCopy copyLabel="Via 2 Produção" />
     </div>
   );
 }
