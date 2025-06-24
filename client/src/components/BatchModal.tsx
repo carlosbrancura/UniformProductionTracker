@@ -10,7 +10,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SimpleBatchEdit from "./SimpleBatchEdit";
 import BatchPrintLayout from "./BatchPrintLayout";
-import type { Batch, Product, Workshop, BatchHistory, User } from "@shared/schema";
+import type { Batch, Product, Workshop } from "@shared/schema";
 
 interface BatchModalProps {
   batch: Batch;
@@ -23,7 +23,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
   const { toast } = useToast();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [showEdit, setShowEdit] = useState(false);
-  const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
+
 
   // Query to get batch products for display only
   const { data: batchProducts = [] } = useQuery({
@@ -69,12 +69,17 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
   const markReturnedMutation = useMutation({
     mutationFn: async () => {
       const newStatus = batch.status === "returned" ? "waiting" : "returned";
+      const updateData: any = { status: newStatus };
+      
+      // If marking as returned, set expectedReturnDate to today
+      if (newStatus === "returned") {
+        updateData.expectedReturnDate = new Date().toISOString().split('T')[0];
+      }
+      
       const response = await fetch(`/api/batches/${batch.id}/simple`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: newStatus
-        }),
+        body: JSON.stringify(updateData),
       });
       if (!response.ok) {
         throw new Error(`Failed to update batch status: ${response.statusText}`);
@@ -335,10 +340,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
     }
   };
 
-  const getUserName = (userId: number) => {
-    const user = users.find(u => u.id === userId);
-    return user?.username || "Usuário";
-  };
+
 
   if (showEdit) {
     return (

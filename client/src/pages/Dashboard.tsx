@@ -65,14 +65,9 @@ export default function Dashboard() {
       <div className="bg-white rounded-lg shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-slate-900">
-            Cronograma {viewType === 'quinzenal' ? 'Quinzenal' : 'Mensal'} de Produção
+            Cronograma de Produção
           </h1>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-slate-700 px-3 py-1 bg-blue-50 border border-blue-200 rounded">
-                Visualização: Quinzenal
-              </span>
-            </div>
             <Button onClick={handleNewBatch} size="lg" className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-5 w-5 mr-2" />
               Novo Lote
