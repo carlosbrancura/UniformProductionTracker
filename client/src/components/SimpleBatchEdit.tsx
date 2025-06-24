@@ -26,8 +26,8 @@ export default function SimpleBatchEdit({ batch, workshops, onClose }: SimpleBat
     batch.workshopId ? batch.workshopId.toString() : "internal"
   );
   const [observations, setObservations] = useState(batch.observations || "");
-  const [actualReturnDate, setActualReturnDate] = useState(
-    batch.actualReturnDate ? format(new Date(batch.actualReturnDate), "yyyy-MM-dd") : ""
+  const [expectedReturnDate, setExpectedReturnDate] = useState(
+    batch.expectedReturnDate ? format(new Date(batch.expectedReturnDate), "yyyy-MM-dd") : ""
   );
 
   const updateMutation = useMutation({
@@ -36,7 +36,7 @@ export default function SimpleBatchEdit({ batch, workshops, onClose }: SimpleBat
         status,
         workshopId: workshopId === "internal" ? null : parseInt(workshopId),
         observations,
-        actualReturnDate
+        expectedReturnDate
       };
       
       console.log('Sending update:', payload);
@@ -120,11 +120,12 @@ export default function SimpleBatchEdit({ batch, workshops, onClose }: SimpleBat
           </div>
 
           <div>
-            <Label>Data de Retorno</Label>
+            <Label>Previsão de Retorno</Label>
             <Input
               type="date"
-              value={actualReturnDate}
-              onChange={(e) => setActualReturnDate(e.target.value)}
+              value={expectedReturnDate}
+              onChange={(e) => setExpectedReturnDate(e.target.value)}
+              disabled={updateMutation.isPending}
             />
           </div>
 

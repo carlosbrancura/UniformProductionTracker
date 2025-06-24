@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
-import BiweeklyCalendar from "@/components/BiweeklyCalendar";
+import OrganizedCalendar from "@/components/OrganizedCalendar";
 import BatchModal from "@/components/BatchModal";
 import BatchForm from "@/components/BatchForm";
 import BatchList from "@/components/BatchList";

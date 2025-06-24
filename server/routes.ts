@@ -207,12 +207,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const workshopData = insertWorkshopSchema.partial().parse(req.body);
+      
+      // Check if schedule order is already taken (excluding current workshop)
+      if (workshopData.scheduleOrder) {
+        const existingWorkshop = await storage.getWorkshopByScheduleOrder(workshopData.scheduleOrder);
+        if (existingWorkshop && existingWorkshop.id !== id) {
+          return res.status(400).json({ message: 'Esta ordem já está sendo usada por outra oficina' });
+        }
+      }
+      
       const workshop = await storage.updateWorkshop(id, workshopData);
       if (!workshop) {
         return res.status(404).json({ message: "Workshop not found" });
       }
       res.json(workshop);
     } catch (error) {
+      console.error("Workshop update error:", error);
       res.status(400).json({ message: "Invalid workshop data" });
     }
   });
@@ -400,6 +410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const history = await storage.getBatchHistory(batchId);
       res.json(history);
     } catch (error) {
+      console.error("Batch history error:", error);
       res.status(500).json({ message: "Failed to fetch batch history" });
     }
   });
