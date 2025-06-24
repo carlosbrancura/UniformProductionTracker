@@ -8,25 +8,33 @@ interface OrganizedCalendarProps {
   products: Product[];
   workshops: Workshop[];
   onBatchClick: (batch: Batch) => void;
+  viewType: 'quinzenal' | 'mensal';
 }
 
-export default function OrganizedCalendar({ batches, products, workshops, onBatchClick }: OrganizedCalendarProps) {
+export default function OrganizedCalendar({ batches, products, workshops, onBatchClick, viewType }: OrganizedCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
 
-  // Calculate quinzenal period (1-15 and 16-end of month)
+  // Calculate period based on view type
   const dayOfMonth = currentDate.getDate();
   let periodStart: Date, periodEnd: Date, viewDays: Date[];
   
-  if (dayOfMonth <= 15) {
-    // First quinzena of month (1st to 15th)
-    periodStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    periodEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 15);
+  if (viewType === 'quinzenal') {
+    if (dayOfMonth <= 15) {
+      // First quinzena of month (1st to 15th)
+      periodStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      periodEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 15);
+    } else {
+      // Second quinzena of month (16th to end of month)
+      periodStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 16);
+      const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+      periodEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), lastDayOfMonth);
+    }
   } else {
-    // Second quinzena of month (16th to end of month)
-    periodStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 16);
+    // Monthly view - show entire month
+    periodStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
     periodEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), lastDayOfMonth);
   }

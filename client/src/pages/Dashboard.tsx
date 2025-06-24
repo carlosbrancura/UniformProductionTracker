@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import OrganizedCalendar from "@/components/OrganizedCalendar";
-import BiweeklyCalendar from "@/components/BiweeklyCalendar";
 import BatchModal from "@/components/BatchModal";
 import BatchForm from "@/components/BatchForm";
 import BatchList from "@/components/BatchList";
@@ -92,21 +91,13 @@ export default function Dashboard() {
           </div>
         </div>
         
-        {viewType === 'quinzenal' ? (
-          <OrganizedCalendar 
-            batches={batches} 
-            products={products}
-            workshops={workshops}
-            onBatchClick={handleBatchClick}
-          />
-        ) : (
-          <BiweeklyCalendar 
-            batches={batches} 
-            products={products}
-            workshops={workshops}
-            onBatchClick={handleBatchClick}
-          />
-        )}
+        <OrganizedCalendar 
+          batches={batches} 
+          products={products}
+          workshops={workshops}
+          onBatchClick={handleBatchClick}
+          viewType={viewType}
+        />
       </div>
 
       {/* Filtros movidos para baixo do cronograma */}
