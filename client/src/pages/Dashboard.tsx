@@ -14,7 +14,7 @@ import type { Batch, Product, Workshop } from "@shared/schema";
 export default function Dashboard() {
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
   const [showBatchForm, setShowBatchForm] = useState(false);
-  const [viewType, setViewType] = useState<'quinzenal' | 'mensal'>('quinzenal');
+  const viewType = 'quinzenal'; // Fixed to quinzenal only
   const [filters, setFilters] = useState({
     product: "all",
     workshop: "all", 
@@ -69,20 +69,9 @@ export default function Dashboard() {
           </h1>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <Button 
-                variant={viewType === 'quinzenal' ? 'default' : 'outline'} 
-                size="sm"
-                onClick={() => setViewType('quinzenal')}
-              >
-                Quinzenal
-              </Button>
-              <Button 
-                variant={viewType === 'mensal' ? 'default' : 'outline'} 
-                size="sm"
-                onClick={() => setViewType('mensal')}
-              >
-                Mensal
-              </Button>
+              <span className="text-sm font-medium text-slate-700 px-3 py-1 bg-blue-50 border border-blue-200 rounded">
+                Visualização: Quinzenal
+              </span>
             </div>
             <Button onClick={handleNewBatch} size="lg" className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-5 w-5 mr-2" />
