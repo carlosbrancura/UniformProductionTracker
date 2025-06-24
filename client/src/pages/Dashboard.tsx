@@ -14,6 +14,7 @@ import type { Batch, Product, Workshop } from "@shared/schema";
 export default function Dashboard() {
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
   const [showBatchForm, setShowBatchForm] = useState(false);
+  const [viewType, setViewType] = useState<'quinzenal' | 'mensal'>('quinzenal');
   const [filters, setFilters] = useState({
     product: "all",
     workshop: "all", 

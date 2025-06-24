@@ -155,12 +155,22 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
       >
         {/* Day Headers */}
         <div className="grid gap-1 text-center text-sm font-medium text-gray-700 mb-4" style={{ gridTemplateColumns: `repeat(${viewDays.length}, 1fr)` }}>
-          {viewDays.map((day, index) => (
-            <div key={index} className="p-2">
-              <div className="font-semibold">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][day.getDay()]}</div>
-              <div className="text-xs text-gray-500">{formatDate(day)}</div>
-            </div>
-          ))}
+          {viewDays.map((day, index) => {
+            const isToday = day.toDateString() === new Date().toDateString();
+            return (
+              <div key={index} className="p-2 relative">
+                {isToday && (
+                  <div className="absolute inset-0 bg-orange-300 bg-opacity-50 rounded"></div>
+                )}
+                <div className={`font-semibold relative z-10 ${isToday ? 'text-orange-800' : ''}`}>
+                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][day.getDay()]}
+                </div>
+                <div className={`text-xs relative z-10 ${isToday ? 'text-orange-700' : 'text-gray-500'}`}>
+                  {formatDate(day)}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Workshop Lines - Fixed lines based on schedule order */}

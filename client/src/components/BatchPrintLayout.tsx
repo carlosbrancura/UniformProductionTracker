@@ -5,9 +5,10 @@ interface BatchPrintLayoutProps {
   batch: any; // Will receive the full batch data with products
   products: Product[];
   workshops: Workshop[];
+  batchProducts?: any[]; // Add batch products for detailed information
 }
 
-export default function BatchPrintLayout({ batch, products, workshops }: BatchPrintLayoutProps) {
+export default function BatchPrintLayout({ batch, products, workshops, batchProducts }: BatchPrintLayoutProps) {
   const workshop = workshops.find(w => w.id === batch.workshopId);
   const workshopName = workshop?.name || "Produção Interna";
 
