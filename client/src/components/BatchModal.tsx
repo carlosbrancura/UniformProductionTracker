@@ -148,7 +148,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
       const workshopInfo = workshops.find(w => w.id === batch.workshopId);
       const workshopName = workshopInfo?.name || 'Produção Interna';
     
-    // Create the print content using our BatchPrintLayout component
+      // Create the print content using our BatchPrintLayout component
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -296,6 +296,9 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
       printWindow.print();
       printWindow.close();
     };
+    } catch (error) {
+      console.error('Error printing batch:', error);
+    }
   };
 
   const getStatusColor = (status: string) => {
