@@ -318,9 +318,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/batches/:id/simple", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { status, workshopId, observations, actualReturnDate } = req.body;
+      const { status, workshopId, observations, expectedReturnDate } = req.body;
       
-      console.log('Batch update:', { id, status, workshopId, observations, actualReturnDate });
+      console.log('Batch update:', { id, status, workshopId, observations, expectedReturnDate });
       
       // Build SQL manually to avoid date conversion issues
       const updateFields = [];
