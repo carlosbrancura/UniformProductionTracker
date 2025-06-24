@@ -8,129 +8,149 @@ interface BatchPrintLayoutProps {
 }
 
 export default function BatchPrintLayout({ batch, products, workshops }: BatchPrintLayoutProps) {
-  const getWorkshopName = (workshopId: number | null) => {
-    if (!workshopId) return "Produção Interna";
-    const workshop = workshops.find(w => w.id === workshopId);
-    return workshop?.name || "Oficina";
-  };
-
-  const getProductName = (productId: number) => {
-    const product = products.find(p => p.id === productId);
-    return product?.name || "Produto";
-  };
+  const workshop = workshops.find(w => w.id === batch.workshopId);
+  const workshopName = workshop?.name || "Produção Interna";
 
   const formatDate = (date: string | Date) => {
     return new Date(date).toLocaleDateString('pt-BR');
   };
 
-  const SingleCopy = () => (
-    <div className="w-full h-1/2 p-6 border-b-2 border-gray-400 print:border-black">
-      {/* Header Section */}
-      <div className="flex items-start gap-6 mb-6">
-        {/* Batch Code Box */}
-        <div className="batch-code bg-blue-600 text-white p-6 rounded-lg font-bold text-3xl min-w-[150px] text-center shadow-lg">
-          Lote {batch.code}
-        </div>
-        
-        {/* Workshop and Dates */}
-        <div className="flex-1">
-          <div className="workshop-title text-2xl font-bold mb-3 text-gray-800">
-            Oficina: {getWorkshopName(batch.workshopId)}
-          </div>
-          <div className="date-info flex gap-8 text-lg font-medium">
-            <span>Data Corte: {formatDate(batch.cutDate)}</span>
-            {batch.expectedReturnDate && (
-              <span>Data Prevista Retorno: {formatDate(batch.expectedReturnDate)}</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Products Section */}
-      <div className="mb-6">
-        <h3 className="font-bold mb-4 text-xl text-gray-800">Produtos:</h3>
-        <div className="space-y-3">
-          {batch.products?.map((batchProduct: any, index: number) => (
-            <div key={index} className="flex justify-between items-center py-2 border-b-2 border-gray-300">
-              <span className="product-name font-bold text-lg">{getProductName(batchProduct.productId)}</span>
-              <div className="product-details flex gap-6 text-base font-medium">
-                <span>Qtd: {batchProduct.quantity}</span>
-                <span>Cor: {batchProduct.selectedColor}</span>
-                <span>Tamanho: {batchProduct.selectedSize}</span>
-              </div>
-            </div>
-          )) || (
-            <div className="text-gray-500 italic text-lg">Nenhum produto especificado</div>
-          )}
-        </div>
-      </div>
-
-      {/* Additional Information */}
-      <div className="space-y-3 text-lg">
-        <div>
-          <strong>Status:</strong> {batch.status === 'cut' ? 'Cortado' : 
-                                  batch.status === 'in_production' ? 'Em Produção' : 
-                                  batch.status === 'ready' ? 'Pronto' : 'Retornado'}
-        </div>
-        
-        {batch.observations && (
-          <div>
-            <strong>Observações:</strong> {batch.observations}
-          </div>
-        )}
-        
-        <div className="mt-6 pt-3 border-t-2 border-gray-300">
-          <div className="flex justify-between text-base text-gray-600 font-medium">
-            <span>Data de Impressão: {new Date().toLocaleDateString('pt-BR')}</span>
-            <span>Sistema de Controle de Produção</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'waiting': return 'Aguardando';
+      case 'internal_production': return 'Em produção';
+      case 'external_workshop': return 'Em produção';
+      case 'returned': return 'Retornado';
+      default: return 'Em produção';
+    }
+  };
 
   return (
-    <div className="print-only w-full h-full bg-white">
+    <div className="print-layout bg-white text-black min-h-screen">
       <style>{`
         @media print {
-          .print-only {
-            display: block !important;
-            font-size: 18px !important;
-          }
-          body * {
-            visibility: hidden;
-          }
-          .print-only, .print-only * {
-            visibility: visible;
-          }
-          .print-only {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100% !important;
-            height: 100% !important;
+          .print-layout {
             margin: 0;
             padding: 0;
+            background: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
-          .print-only .batch-code {
-            background-color: black !important;
-            color: white !important;
-          }
-          @page {
-            size: A4;
-            margin: 1cm;
-          }
+          body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+          * { box-sizing: border-box; }
+          .page-break { page-break-before: always; }
         }
-        .print-only {
-          display: none;
+        .batch-header {
+          background-color: black !important;
+          color: white !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .separator-line {
+          border-bottom: 2px solid black !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
       `}</style>
-      
-      {/* Via 1 Oficina */}
-      <SingleCopy copyLabel="Via 1 Oficina" />
-      
-      {/* Via 2 Produção */}
-      <SingleCopy copyLabel="Via 2 Produção" />
+
+      {/* Primeira Via - Oficina */}
+      <div className="p-6 min-h-[48vh]">
+        {/* Header */}
+        <div className="flex items-start gap-6 mb-6">
+          {/* Lote Box */}
+          <div className="batch-header text-white p-4 font-bold text-2xl min-w-[120px] text-center">
+            LOTE {batch.code}
+          </div>
+          
+          {/* Workshop and Dates */}
+          <div className="flex-1">
+            <div className="text-xl font-bold mb-2">
+              Oficina: {workshopName}
+            </div>
+            <div className="text-base">
+              Data Corte: {formatDate(batch.cutDate)} - Entrega Prevista: {batch.expectedReturnDate ? formatDate(batch.expectedReturnDate) : 'Não definida'}
+            </div>
+          </div>
+        </div>
+
+        {/* Products Section */}
+        <div className="mb-8">
+          <div className="text-lg font-bold mb-3 separator-line pb-1">Produtos</div>
+          <div className="space-y-2">
+            {batch.products?.map((product: any, index: number) => (
+              <div key={index} className="flex justify-between items-center text-base">
+                <span className="flex-1">{product.name}</span>
+                <span className="w-20 text-center">Quant: <strong>{product.quantity}</strong></span>
+                <span className="w-20 text-center">Cor: <strong>{product.color}</strong></span>
+                <span className="w-16 text-center">Tam: <strong>{product.sizes}</strong></span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-auto">
+          <div className="flex justify-between items-center text-sm separator-line pt-2">
+            <div>Status: {getStatusText(batch.status)}</div>
+            <div>1ª via Oficina</div>
+          </div>
+          <div className="flex justify-between items-center text-sm mt-2">
+            <div>Data de Impressão: {formatDate(new Date())}</div>
+            <div>Sistema de Controle de Produção</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Linha divisória */}
+      <div className="separator-line w-full"></div>
+
+      {/* Segunda Via - Produção */}
+      <div className="p-6 min-h-[48vh]">
+        {/* Header */}
+        <div className="flex items-start gap-6 mb-6">
+          {/* Lote Box */}
+          <div className="batch-header text-white p-4 font-bold text-2xl min-w-[120px] text-center">
+            LOTE {batch.code}
+          </div>
+          
+          {/* Workshop and Dates */}
+          <div className="flex-1">
+            <div className="text-xl font-bold mb-2">
+              Oficina: {workshopName}
+            </div>
+            <div className="text-base">
+              Data Corte: {formatDate(batch.cutDate)} - Entrega Prevista: {batch.expectedReturnDate ? formatDate(batch.expectedReturnDate) : 'Não definida'}
+            </div>
+          </div>
+        </div>
+
+        {/* Products Section */}
+        <div className="mb-8">
+          <div className="text-lg font-bold mb-3 separator-line pb-1">Produtos</div>
+          <div className="space-y-2">
+            {batch.products?.map((product: any, index: number) => (
+              <div key={index} className="flex justify-between items-center text-base">
+                <span className="flex-1">{product.name}</span>
+                <span className="w-20 text-center">Quant: <strong>{product.quantity}</strong></span>
+                <span className="w-20 text-center">Cor: <strong>{product.color}</strong></span>
+                <span className="w-16 text-center">Tam: <strong>{product.sizes}</strong></span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-auto">
+          <div className="flex justify-between items-center text-sm separator-line pt-2">
+            <div>Status: {getStatusText(batch.status)}</div>
+            <div>2ª via Produção</div>
+          </div>
+          <div className="flex justify-between items-center text-sm mt-2">
+            <div>Data de Impressão: {formatDate(new Date())}</div>
+            <div>Sistema de Controle de Produção</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
