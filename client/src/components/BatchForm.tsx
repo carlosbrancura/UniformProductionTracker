@@ -551,7 +551,7 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
                 </Button>
                 <Button
                   onClick={() => {
-                    printBatch();
+                    openPrintWindow(createdBatch);
                     setShowPrintDialog(false);
                     onClose();
                   }}
