@@ -148,13 +148,6 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
             
             return (
               <div key={workshop.id} className="relative">
-                {/* Workshop Color Indicator Only */}
-                <div className="flex items-center mb-2">
-                  <div 
-                    className="w-4 h-4 rounded mr-2"
-                    style={{ backgroundColor: workshop.color }}
-                  />
-                </div>
 
                 {/* Fixed Batch Grid for this Workshop */}
                 <div 
@@ -169,8 +162,6 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                   {workshopBatches.map((batch) => {
                     const position = getBatchPosition(batch);
                     if (!position) return null;
-
-                    const productName = getProductName(batch.productId);
                     
                     return (
                       <div
@@ -187,7 +178,7 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                           {batch.status === 'returned' && (
                             <span className="bg-white text-gray-600 px-1 rounded text-xs mr-1 font-bold">RETORNADO</span>
                           )}
-                          Lote {batch.code} • <span className="italic opacity-80">{productName} (Qtd: {batch.quantity})</span>
+                          Lote {batch.code} • <span className="italic opacity-80">{getProductName(batch.productId)} (Qtd: {batch.quantity})</span>
                         </div>
                       </div>
                     );

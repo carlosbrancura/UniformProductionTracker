@@ -179,7 +179,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
               <!-- Workshop and Dates -->
               <div style="flex: 1;">
                 <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">
-                  Oficina: ${workshop?.name || 'Produção Interna'}
+                  Oficina: ${workshopName}
                 </div>
                 <div style="font-size: 16px;">
                   Data Corte: ${new Date(batch.cutDate).toLocaleDateString('pt-BR')} - Entrega Prevista: ${batch.expectedReturnDate ? new Date(batch.expectedReturnDate).toLocaleDateString('pt-BR') : 'Não definida'}
@@ -236,7 +236,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
               <!-- Workshop and Dates -->
               <div style="flex: 1;">
                 <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">
-                  Oficina: ${workshop?.name || 'Produção Interna'}
+                  Oficina: ${workshopName}
                 </div>
                 <div style="font-size: 16px;">
                   Data Corte: ${new Date(batch.cutDate).toLocaleDateString('pt-BR')} - Entrega Prevista: ${batch.expectedReturnDate ? new Date(batch.expectedReturnDate).toLocaleDateString('pt-BR') : 'Não definida'}
