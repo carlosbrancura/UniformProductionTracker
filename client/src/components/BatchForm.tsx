@@ -215,6 +215,9 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
     defaultValues: {
       status: "waiting",
       cutDate: new Date().toISOString().split('T')[0],
+      expectedReturnDate: "",
+      observations: "",
+      workshopId: "",
       products: [{ productId: "", quantity: 1, selectedColor: "", selectedSize: "" }],
     },
   });

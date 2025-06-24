@@ -279,11 +279,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create the batch using storage service which handles multiple products
+      // Fix timezone issue by creating dates at noon to avoid timezone shifts
+      const createLocalDate = (dateString: string) => {
+        const parts = dateString.split('-');
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+      };
+
       const batchData = {
-        cutDate: new Date(cutDate),
+        cutDate: createLocalDate(cutDate),
         status: status || "waiting",
         workshopId: workshopId && workshopId !== "internal" ? parseInt(workshopId) : null,
-        expectedReturnDate: expectedReturnDate ? new Date(expectedReturnDate) : null,
+        expectedReturnDate: expectedReturnDate ? createLocalDate(expectedReturnDate) : null,
         observations: observations || null,
         products: products.map((p: any) => ({
           productId: parseInt(p.productId),
