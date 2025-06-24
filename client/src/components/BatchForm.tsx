@@ -246,11 +246,170 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
       const response = await apiRequest('POST', '/api/batches', batchData);
       return response.json();
     },
-    onSuccess: (newBatch) => {
+    onSuccess: async (newBatch) => {
       toast({ title: "Lote criado com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["/api/batches"] });
-      setCreatedBatch(newBatch);
-      setShowPrintDialog(true);
+      
+      // Auto-print after creation with proper product data
+      setTimeout(async () => {
+        try {
+          // Fetch batch products for printing
+          const batchProductsRes = await fetch(`/api/batch-products/${newBatch.id}`);
+          const batchProducts = batchProductsRes.ok ? await batchProductsRes.json() : [];
+          
+          console.log('Batch products for print:', batchProducts);
+          
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) return;
+          
+          // Get workshop info for print
+          const workshopInfo = workshops.find(w => w.id === newBatch.workshopId);
+          const workshopName = workshopInfo?.name || 'Produção Interna';
+          
+          // Generate product rows for print
+          const generateProductRows = (batchProducts: any[]) => {
+            return batchProducts.map((bp: any) => {
+              const product = products.find(p => p.id === bp.productId);
+              return `
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 16px; margin-bottom: 8px;">
+                  <span style="flex: 1;">${product?.name || 'Produto'}</span>
+                  <span style="width: 80px; text-align: center;">Quant: <strong>${bp.quantity}</strong></span>
+                  <span style="width: 80px; text-align: center;">Cor: <strong>${bp.selectedColor || 'N/A'}</strong></span>
+                  <span style="width: 64px; text-align: center;">Tam: <strong>${bp.selectedSize || 'N/A'}</strong></span>
+                </div>
+              `;
+            }).join('');
+          };
+          
+          const printContent = `
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>Lote ${newBatch.code} - Impressão</title>
+                <style>
+                  body { 
+                    margin: 0; 
+                    padding: 0; 
+                    font-family: Arial, sans-serif; 
+                    background: white;
+                  }
+                  .batch-header {
+                    background-color: black !important;
+                    color: white !important;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                  }
+                  .separator-line {
+                    border-bottom: 1px dotted black !important;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                  }
+                  .page-break {
+                    border-bottom: 2px dotted black !important;
+                    margin: 20px 0;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                  }
+                  @media print {
+                    body { margin: 0; padding: 0; }
+                    * { box-sizing: border-box; }
+                  }
+                </style>
+              </head>
+              <body>
+                <!-- Primeira Via - Oficina -->
+                <div style="padding: 24px; min-height: 48vh;">
+                  <div style="display: flex; align-items: flex-start; gap: 24px; margin-bottom: 24px;">
+                    <div class="batch-header" style="color: white; padding: 16px; font-weight: bold; font-size: 24px; min-width: 120px; text-align: center;">
+                      LOTE ${newBatch.code}
+                    </div>
+                    <div style="flex: 1;">
+                      <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">
+                        Oficina: ${workshopName}
+                      </div>
+                      <div style="font-size: 16px;">
+                        Data Corte: ${new Date(newBatch.cutDate).toLocaleDateString('pt-BR')} - Entrega Prevista: ${newBatch.expectedReturnDate ? new Date(newBatch.expectedReturnDate).toLocaleDateString('pt-BR') : 'Não definida'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style="margin-bottom: 32px;">
+                    <div class="separator-line" style="font-size: 18px; font-weight: bold; margin-bottom: 12px; padding-bottom: 4px;">Produtos</div>
+                    <div style="display: flex; flex-direction: column;">
+                      ${generateProductRows(batchProducts)}
+                    </div>
+                  </div>
+                  
+                  <div style="margin-top: auto;">
+                    <div class="separator-line" style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; padding-top: 8px;">
+                      <div>Status: Em produção</div>
+                      <div>1ª via Oficina</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-top: 8px;">
+                      <div>Data de Impressão: ${new Date().toLocaleDateString('pt-BR')}</div>
+                      <div>Sistema de Controle de Produção</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Linha divisória -->
+                <div class="page-break"></div>
+
+                <!-- Segunda Via - Produção -->
+                <div style="padding: 24px; min-height: 48vh;">
+                  <div style="display: flex; align-items: flex-start; gap: 24px; margin-bottom: 24px;">
+                    <div class="batch-header" style="color: white; padding: 16px; font-weight: bold; font-size: 24px; min-width: 120px; text-align: center;">
+                      LOTE ${newBatch.code}
+                    </div>
+                    <div style="flex: 1;">
+                      <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">
+                        Oficina: ${workshopName}
+                      </div>
+                      <div style="font-size: 16px;">
+                        Data Corte: ${new Date(newBatch.cutDate).toLocaleDateString('pt-BR')} - Entrega Prevista: ${newBatch.expectedReturnDate ? new Date(newBatch.expectedReturnDate).toLocaleDateString('pt-BR') : 'Não definida'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style="margin-bottom: 32px;">
+                    <div class="separator-line" style="font-size: 18px; font-weight: bold; margin-bottom: 12px; padding-bottom: 4px;">Produtos</div>
+                    <div style="display: flex; flex-direction: column;">
+                      ${generateProductRows(batchProducts)}
+                    </div>
+                  </div>
+                  
+                  <div style="margin-top: auto;">
+                    <div class="separator-line" style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; padding-top: 8px;">
+                      <div>Status: Em produção</div>
+                      <div>2ª via Produção</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-top: 8px;">
+                      <div>Data de Impressão: ${new Date().toLocaleDateString('pt-BR')}</div>
+                      <div>Sistema de Controle de Produção</div>
+                    </div>
+                  </div>
+                </div>
+              </body>
+            </html>
+          `;
+          
+          printWindow.document.write(printContent);
+          printWindow.document.close();
+          
+          // Wait for content to load then print
+          printWindow.onload = () => {
+            setTimeout(() => {
+              printWindow.print();
+              printWindow.close();
+            }, 500);
+          };
+        } catch (error) {
+          console.error('Error in auto-print:', error);
+          toast({ title: "Erro na impressão automática", variant: "destructive" });
+        }
+      }, 1000);
+      
+      onClose();
     },
     onError: () => {
       toast({ title: "Erro ao criar lote", variant: "destructive" });

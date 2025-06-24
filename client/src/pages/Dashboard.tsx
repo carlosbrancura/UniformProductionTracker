@@ -62,22 +62,51 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Cronograma Semanal com Destaque Total */}
+      {/* Cronograma com Destaque Total */}
       <div className="bg-white rounded-lg shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-slate-900">Cronograma Semanal de Produção</h1>
-          <Button onClick={handleNewBatch} size="lg" className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="h-5 w-5 mr-2" />
-            Novo Lote
-          </Button>
+          <h1 className="text-3xl font-bold text-slate-900">
+            Cronograma {viewType === 'quinzenal' ? 'Quinzenal' : 'Mensal'} de Produção
+          </h1>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant={viewType === 'quinzenal' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setViewType('quinzenal')}
+              >
+                Quinzenal
+              </Button>
+              <Button 
+                variant={viewType === 'mensal' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setViewType('mensal')}
+              >
+                Mensal
+              </Button>
+            </div>
+            <Button onClick={handleNewBatch} size="lg" className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-5 w-5 mr-2" />
+              Novo Lote
+            </Button>
+          </div>
         </div>
         
-        <OrganizedCalendar 
-          batches={batches} 
-          products={products}
-          workshops={workshops}
-          onBatchClick={handleBatchClick}
-        />
+        {viewType === 'quinzenal' ? (
+          <OrganizedCalendar 
+            batches={batches} 
+            products={products}
+            workshops={workshops}
+            onBatchClick={handleBatchClick}
+          />
+        ) : (
+          <BiweeklyCalendar 
+            batches={batches} 
+            products={products}
+            workshops={workshops}
+            onBatchClick={handleBatchClick}
+          />
+        )}
       </div>
 
       {/* Filtros movidos para baixo do cronograma */}
