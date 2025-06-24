@@ -340,12 +340,11 @@ export default function BiweeklyCalendar({ batches, products, workshops, onBatch
                         key={batch.id}
                         style={{ 
                           gridColumn: position.gridColumn,
-                          backgroundColor: batch.status === 'returned' ? '#6B7280' : workshopColor 
+                          backgroundColor: workshopColor,
+                          opacity: batch.status === 'returned' ? 0.5 : 1
                         }}
                         onClick={() => onBatchClick(batch)}
-                        className={`rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center ${
-                          batch.status === 'returned' ? 'opacity-70' : ''
-                        }`}
+                        className="rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center"
                       >
                         <div className="text-xs font-medium truncate">
                           {batch.status === 'returned' && (

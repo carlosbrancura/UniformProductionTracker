@@ -44,6 +44,7 @@ export const workshops = pgTable("workshops", {
   serviceType: text("service_type").notNull(),
   capacity: text("capacity"),
   color: text("color").notNull(), // for calendar display
+  scheduleOrder: integer("schedule_order").notNull().default(1),
 });
 
 export const batches = pgTable("batches", {

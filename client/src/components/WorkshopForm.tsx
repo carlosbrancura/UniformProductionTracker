@@ -51,6 +51,7 @@ export default function WorkshopForm({ workshop, onClose }: WorkshopFormProps) {
       serviceType: workshop?.serviceType || "",
       capacity: workshop?.capacity || "",
       color: workshop?.color || "#3B82F6",
+      scheduleOrder: workshop?.scheduleOrder || 1,
     },
   });
 
@@ -174,6 +175,21 @@ export default function WorkshopForm({ workshop, onClose }: WorkshopFormProps) {
             {form.formState.errors.color && (
               <p className="text-sm text-red-600">{form.formState.errors.color.message}</p>
             )}
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="scheduleOrder" className="block text-sm font-medium text-gray-700 mb-1">
+              Ordem Cronograma
+            </label>
+            <input
+              type="number"
+              id="scheduleOrder"
+              min="1"
+              placeholder="1"
+              className="w-full p-2 border border-gray-300 rounded-md"
+              {...form.register("scheduleOrder")}
+            />
+            <p className="text-xs text-gray-500 mt-1">Define a linha no cronograma (1, 2, 3, 4...)</p>
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
