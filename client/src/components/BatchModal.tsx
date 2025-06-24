@@ -133,7 +133,158 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
   };
 
   const handlePrint = () => {
-    window.print();
+    // Open a new window with just the print layout
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    // Create the print content using our BatchPrintLayout component
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Lote ${batch.code} - Impressão</title>
+          <style>
+            body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+            .batch-header {
+              background-color: black !important;
+              color: white !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .separator-line {
+              border-bottom: 2px solid black !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            @media print {
+              body { margin: 0; padding: 0; }
+              * { box-sizing: border-box; }
+            }
+          </style>
+        </head>
+        <body>
+          <!-- Primeira Via - Oficina -->
+          <div style="padding: 24px; min-height: 48vh;">
+            <!-- Header -->
+            <div style="display: flex; align-items: flex-start; gap: 24px; margin-bottom: 24px;">
+              <!-- Lote Box -->
+              <div class="batch-header" style="color: white; padding: 16px; font-weight: bold; font-size: 24px; min-width: 120px; text-align: center;">
+                LOTE ${batch.code}
+              </div>
+              
+              <!-- Workshop and Dates -->
+              <div style="flex: 1;">
+                <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">
+                  Oficina: ${workshop?.name || 'Produção Interna'}
+                </div>
+                <div style="font-size: 16px;">
+                  Data Corte: ${new Date(batch.cutDate).toLocaleDateString('pt-BR')} - Entrega Prevista: ${batch.expectedReturnDate ? new Date(batch.expectedReturnDate).toLocaleDateString('pt-BR') : 'Não definida'}
+                </div>
+              </div>
+            </div>
+
+            <!-- Products Section -->
+            <div style="margin-bottom: 32px;">
+              <div class="separator-line" style="font-size: 18px; font-weight: bold; margin-bottom: 12px; padding-bottom: 4px;">Produtos</div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                ${batchProducts.map((bp: any) => {
+                  const product = products.find(p => p.id === bp.productId);
+                  return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 16px;">
+                      <span style="flex: 1;">${product?.name || 'Produto'}</span>
+                      <span style="width: 80px; text-align: center;">Quant: <strong>${bp.quantity}</strong></span>
+                      <span style="width: 80px; text-align: center;">Cor: <strong>${bp.color}</strong></span>
+                      <span style="width: 64px; text-align: center;">Tam: <strong>${bp.sizes}</strong></span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="margin-top: auto;">
+              <div class="separator-line" style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; padding-top: 8px;">
+                <div>Status: ${batch.status === 'waiting' ? 'Aguardando' :
+                           batch.status === 'internal_production' ? 'Em produção' :
+                           batch.status === 'external_workshop' ? 'Em produção' :
+                           batch.status === 'returned' ? 'Retornado' : 'Em produção'}</div>
+                <div>1ª via Oficina</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-top: 8px;">
+                <div>Data de Impressão: ${new Date().toLocaleDateString('pt-BR')}</div>
+                <div>Sistema de Controle de Produção</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linha divisória -->
+          <div class="separator-line" style="width: 100%;"></div>
+
+          <!-- Segunda Via - Produção -->
+          <div style="padding: 24px; min-height: 48vh;">
+            <!-- Header -->
+            <div style="display: flex; align-items: flex-start; gap: 24px; margin-bottom: 24px;">
+              <!-- Lote Box -->
+              <div class="batch-header" style="color: white; padding: 16px; font-weight: bold; font-size: 24px; min-width: 120px; text-align: center;">
+                LOTE ${batch.code}
+              </div>
+              
+              <!-- Workshop and Dates -->
+              <div style="flex: 1;">
+                <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">
+                  Oficina: ${workshop?.name || 'Produção Interna'}
+                </div>
+                <div style="font-size: 16px;">
+                  Data Corte: ${new Date(batch.cutDate).toLocaleDateString('pt-BR')} - Entrega Prevista: ${batch.expectedReturnDate ? new Date(batch.expectedReturnDate).toLocaleDateString('pt-BR') : 'Não definida'}
+                </div>
+              </div>
+            </div>
+
+            <!-- Products Section -->
+            <div style="margin-bottom: 32px;">
+              <div class="separator-line" style="font-size: 18px; font-weight: bold; margin-bottom: 12px; padding-bottom: 4px;">Produtos</div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                ${batchProducts.map((bp: any) => {
+                  const product = products.find(p => p.id === bp.productId);
+                  return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 16px;">
+                      <span style="flex: 1;">${product?.name || 'Produto'}</span>
+                      <span style="width: 80px; text-align: center;">Quant: <strong>${bp.quantity}</strong></span>
+                      <span style="width: 80px; text-align: center;">Cor: <strong>${bp.color}</strong></span>
+                      <span style="width: 64px; text-align: center;">Tam: <strong>${bp.sizes}</strong></span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="margin-top: auto;">
+              <div class="separator-line" style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; padding-top: 8px;">
+                <div>Status: ${batch.status === 'waiting' ? 'Aguardando' :
+                           batch.status === 'internal_production' ? 'Em produção' :
+                           batch.status === 'external_workshop' ? 'Em produção' :
+                           batch.status === 'returned' ? 'Retornado' : 'Em produção'}</div>
+                <div>2ª via Produção</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-top: 8px;">
+                <div>Data de Impressão: ${new Date().toLocaleDateString('pt-BR')}</div>
+                <div>Sistema de Controle de Produção</div>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for content to load then print
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.close();
+    };
   };
 
   const getStatusColor = (status: string) => {
