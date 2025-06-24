@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Camera, Edit, Trash2, CheckCircle, Printer } from "lucide-react";
+import { X, Camera, Edit, Trash2, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { queryClient } from "@/lib/queryClient";
@@ -384,15 +384,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
                 <Edit className="h-4 w-4 mr-1" />
                 Editar
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrint}
-                className="text-blue-600 hover:text-blue-700"
-              >
-                <Printer className="h-4 w-4 mr-1" />
-                Imprimir
-              </Button>
+
               <Button
                 variant="outline"
                 size="sm"
@@ -536,60 +528,10 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
             </div>
           </div>
 
-          {/* History Section */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Histórico</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-              >
-                {isHistoryExpanded ? "Ocultar" : "Mostrar"} Histórico
-              </Button>
-            </div>
-            
-            {isHistoryExpanded && (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {history && history.length > 0 ? (
-                  history.map((entry) => (
-                    <div key={entry.id} className="p-3 bg-slate-50 rounded border">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">{entry.action}</p>
-                          {entry.notes && (
-                            <p className="text-sm text-slate-600 mt-1">{entry.notes}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-slate-500">
-                            {entry.timestamp && format(new Date(entry.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            {getUserName(entry.userId)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-slate-500">Nenhum histórico disponível</p>
-                )}
-              </div>
-            )}
-          </div>
+
         </div>
       </DialogContent>
-      
-      {/* Hidden Print Layout */}
-      <BatchPrintLayout 
-        batch={{
-          ...batch,
-          products: batchProducts
-        }} 
-        products={products} 
-        workshops={workshops} 
-      />
+
     </Dialog>
   );
 }
