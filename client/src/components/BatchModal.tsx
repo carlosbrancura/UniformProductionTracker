@@ -156,7 +156,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
               print-color-adjust: exact;
             }
             .separator-line {
-              border-bottom: 2px solid black !important;
+              border-bottom: 1px dotted black !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
@@ -181,7 +181,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
                 <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">
                   Oficina: ${workshopName}
                 </div>
-                <div style="font-size: 16px;">
+                <div style="font-size: 14px;">
                   Data Corte: ${new Date(batch.cutDate).toLocaleDateString('pt-BR')} - Entrega Prevista: ${batch.expectedReturnDate ? new Date(batch.expectedReturnDate).toLocaleDateString('pt-BR') : 'Não definida'}
                 </div>
               </div>
@@ -189,7 +189,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
 
             <!-- Products Section -->
             <div style="margin-bottom: 32px;">
-              <div class="separator-line" style="font-size: 18px; font-weight: bold; margin-bottom: 12px; padding-bottom: 4px;">Produtos</div>
+              <div class="separator-line" style="font-size: 16px; font-weight: bold; margin-bottom: 12px; padding-bottom: 4px;">Produtos</div>
               <div style="display: flex; flex-direction: column; gap: 8px;">
                 ${batchProducts.map((bp: any) => {
                   const product = products.find(p => p.id === bp.productId);

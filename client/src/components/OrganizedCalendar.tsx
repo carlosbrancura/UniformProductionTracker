@@ -178,7 +178,7 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                           {batch.status === 'returned' && (
                             <span className="bg-white text-gray-600 px-1 rounded text-xs mr-1 font-bold">RETORNADO</span>
                           )}
-                          Lote {batch.code} • <span className="italic opacity-80">{getProductName(batch.productId)} (Qtd: {batch.quantity})</span>
+                          Lote {batch.code} • <span className="italic opacity-80">{batch.productId ? getProductName(batch.productId) : 'Múltiplos produtos'} (Qtd: {batch.quantity || 'N/A'})</span>
                         </div>
                       </div>
                     );
