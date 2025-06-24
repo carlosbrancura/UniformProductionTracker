@@ -151,14 +151,28 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
 
                 {/* Fixed Batch Grid for this Workshop */}
                 <div 
-                  className="grid gap-1 relative"
+                  className="relative"
                   style={{ 
-                    gridTemplateColumns: 'repeat(14, 1fr)',
                     borderBottom: workshopIndex < sortedWorkshops.length - 1 ? '1px dotted #d1d5db' : 'none',
                     paddingBottom: workshopIndex < sortedWorkshops.length - 1 ? '16px' : '0',
                     minHeight: '60px' // Fixed height even if no batches
                   }}
                 >
+                  {/* Grid background for reference */}
+                  <div 
+                    className="grid gap-1"
+                    style={{ 
+                      gridTemplateColumns: 'repeat(14, 1fr)',
+                      height: '60px'
+                    }}
+                  >
+                    {/* Invisible grid cells for structure */}
+                    {Array.from({ length: 14 }).map((_, index) => (
+                      <div key={index} className="border-r border-gray-50 last:border-r-0"></div>
+                    ))}
+                  </div>
+                  
+                  {/* Absolute positioned batches overlay */}
                   {workshopBatches.map((batch) => {
                     const position = getBatchPosition(batch);
                     if (!position) return null;
@@ -166,19 +180,21 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                     return (
                       <div
                         key={batch.id}
+                        className="absolute top-0 rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center h-[50px]"
                         style={{ 
                           gridColumn: position.gridColumn,
                           backgroundColor: workshop.color,
-                          opacity: batch.status === 'returned' ? 0.5 : 1
+                          opacity: batch.status === 'returned' ? 0.5 : 1,
+                          left: `${((position.gridColumn.split(' ')[0] - 1) / 14) * 100}%`,
+                          width: `${(position.gridColumn.includes('span') ? parseInt(position.gridColumn.split('span ')[1]) : 1) * (100/14)}%`
                         }}
                         onClick={() => onBatchClick(batch)}
-                        className="rounded-lg p-2 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center min-h-[50px]"
                       >
-                        <div className="text-xs font-medium truncate">
+                        <div className="text-xs font-medium truncate w-full">
                           {batch.status === 'returned' && (
                             <span className="bg-white text-gray-600 px-1 rounded text-xs mr-1 font-bold">RETORNADO</span>
                           )}
-                          Lote {batch.code} • <span className="italic opacity-80">{batch.productId ? getProductName(batch.productId) : 'Múltiplos produtos'} (Qtd: {batch.quantity || 'N/A'})</span>
+                          Lote {batch.code}
                         </div>
                       </div>
                     );
