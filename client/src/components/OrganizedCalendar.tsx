@@ -64,15 +64,15 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
     setCurrentDate(newDate);
   };
 
-  const getBatchPosition = (batch: Batch) => {
+  const getBatchPosition = (batch: Batch, viewDaysArray: Date[]) => {
     const cutDate = new Date(batch.cutDate);
     const returnDate = batch.expectedReturnDate ? new Date(batch.expectedReturnDate) : new Date(cutDate.getTime() + 7 * 24 * 60 * 60 * 1000);
     
-    const startIndex = viewDays.findIndex(day => 
+    const startIndex = viewDaysArray.findIndex(day => 
       day.toDateString() === cutDate.toDateString()
     );
     
-    const endIndex = viewDays.findIndex(day => 
+    const endIndex = viewDaysArray.findIndex(day => 
       day.toDateString() === returnDate.toDateString()
     );
 
@@ -152,7 +152,7 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
         onTouchEnd={handleEnd}
       >
         {/* Day Headers */}
-        <div className="grid gap-1 text-center text-sm font-medium text-gray-700 mb-4" style={{ gridTemplateColumns: 'repeat(14, 1fr)' }}>
+        <div className="grid gap-1 text-center text-sm font-medium text-gray-700 mb-4" style={{ gridTemplateColumns: `repeat(${viewDays.length}, 1fr)` }}>
           {viewDays.map((day, index) => (
             <div key={index} className="p-2">
               <div className="font-semibold">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][day.getDay()]}</div>
@@ -183,25 +183,25 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                   <div 
                     className="grid gap-1"
                     style={{ 
-                      gridTemplateColumns: 'repeat(14, 1fr)',
+                      gridTemplateColumns: `repeat(${viewDays.length}, 1fr)`,
                       height: '45px'
                     }}
                   >
                     {/* Invisible grid cells for structure */}
-                    {Array.from({ length: 14 }).map((_, index) => (
+                    {Array.from({ length: viewDays.length }).map((_, index) => (
                       <div key={index} className="border-r border-gray-50 last:border-r-0"></div>
                     ))}
                   </div>
                   
                   {/* Absolute positioned batches overlay */}
                   {workshopBatches.map((batch) => {
-                    const position = getBatchPosition(batch);
+                    const position = getBatchPosition(batch, viewDays);
                     if (!position) return null;
                     
                     const startCol = parseInt(position.gridColumn.split(' ')[0]);
                     const span = position.gridColumn.includes('span') ? parseInt(position.gridColumn.split('span ')[1]) : 1;
-                    const leftPercent = ((startCol - 1) / 14) * 100;
-                    const widthPercent = (span / 14) * 100;
+                    const leftPercent = ((startCol - 1) / viewDays.length) * 100;
+                    const widthPercent = (span / viewDays.length) * 100;
                     
                     return (
                       <div
