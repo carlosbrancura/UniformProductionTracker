@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import OrganizedCalendar from "@/components/OrganizedCalendar";
+import BiweeklyCalendar from "@/components/BiweeklyCalendar";
 import BatchModal from "@/components/BatchModal";
 import BatchForm from "@/components/BatchForm";
 import BatchList from "@/components/BatchList";
