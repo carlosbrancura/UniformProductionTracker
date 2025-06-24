@@ -524,26 +524,30 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
             
             {isHistoryExpanded && (
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {history.map((entry) => (
-                  <div key={entry.id} className="p-3 bg-slate-50 rounded border">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">{entry.action}</p>
-                        {entry.notes && (
-                          <p className="text-sm text-slate-600 mt-1">{entry.notes}</p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-slate-500">
-                          {format(new Date(entry.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {getUserName(entry.userId)}
-                        </p>
+                {history && history.length > 0 ? (
+                  history.map((entry) => (
+                    <div key={entry.id} className="p-3 bg-slate-50 rounded border">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{entry.action}</p>
+                          {entry.notes && (
+                            <p className="text-sm text-slate-600 mt-1">{entry.notes}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-slate-500">
+                            {entry.timestamp && format(new Date(entry.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {getUserName(entry.userId)}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500">Nenhum histórico disponível</p>
+                )}
               </div>
             )}
           </div>
