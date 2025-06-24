@@ -81,8 +81,8 @@ export default function BatchPrintLayout({ batch, products, workshops, batchProd
             {batch.products?.map((product: any, index: number) => (
               <div key={index} className="flex justify-between items-center text-base">
                 <span className="flex-1">{product.name}</span>
-                <span className="w-16 text-center">Quant: <strong>{product.quantity}</strong></span>
-                <span className="w-16 text-center">Cor: <strong>{product.color}</strong></span>
+                <span className="w-20 text-center">Quant: <strong>{product.quantity}</strong></span>
+                <span className="w-20 text-center">Cor: <strong>{product.color}</strong></span>
                 <span className="w-16 text-center">Tam: <strong>{product.sizes}</strong></span>
               </div>
             ))}
