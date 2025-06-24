@@ -373,7 +373,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
                   disabled={markReturnedMutation.isPending}
                 >
                   <CheckCircle className="h-4 w-4 mr-1" />
-                  {markReturnedMutation.isPending ? "Marcando..." : "Retornado"}
+                  {markReturnedMutation.isPending ? "Marcando..." : "Marcar como Retornado"}
                 </Button>
               )}
               <Button
