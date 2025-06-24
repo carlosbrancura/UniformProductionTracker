@@ -92,7 +92,12 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
             <div style="margin-bottom: 32px;">
               <div class="separator-line" style="font-size: 18px; font-weight: bold; margin-bottom: 12px; padding-bottom: 4px;">Produtos</div>
               <div style="display: flex; flex-direction: column; gap: 8px;">
-                Produtos serão listados aqui após integração completa
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 16px;">
+                  <span style="flex: 1;">Produto: Em desenvolvimento</span>
+                  <span style="width: 80px; text-align: center;">Quant: <strong>-</strong></span>
+                  <span style="width: 80px; text-align: center;">Cor: <strong>-</strong></span>
+                  <span style="width: 64px; text-align: center;">Tam: <strong>-</strong></span>
+                </div>
               </div>
             </div>
             <div style="margin-top: auto;">
@@ -181,10 +186,10 @@ export default function BatchForm({ products, workshops, onClose }: BatchFormPro
   const createBatchMutation = useMutation({
     mutationFn: async (data: BatchFormData) => {
       const batchData = {
-        cutDate: new Date(data.cutDate),
+        cutDate: data.cutDate + 'T00:00:00.000Z',
         status: data.status,
         workshopId: data.workshopId ? parseInt(data.workshopId) : null,
-        expectedReturnDate: data.expectedReturnDate ? new Date(data.expectedReturnDate) : null,
+        expectedReturnDate: data.expectedReturnDate ? data.expectedReturnDate + 'T00:00:00.000Z' : null,
         observations: data.observations,
         products: data.products.map(p => ({
           productId: parseInt(p.productId),
