@@ -47,26 +47,26 @@ export default function BatchPrintLayout({ batch, products, workshops }: BatchPr
       </div>
 
       {/* Products Section */}
-      <div className="mb-6">
-        <h3 className="font-bold mb-4 text-xl text-gray-800">Produtos:</h3>
-        <div className="space-y-3">
+      <div className="mb-12">
+        <h3 className="font-bold mb-8 text-4xl text-gray-800">Produtos:</h3>
+        <div className="space-y-6">
           {batch.products?.map((batchProduct: any, index: number) => (
-            <div key={index} className="flex justify-between items-center py-2 border-b-2 border-gray-300">
-              <span className="product-name font-bold text-lg">{getProductName(batchProduct.productId)}</span>
-              <div className="product-details flex gap-6 text-base font-medium">
+            <div key={index} className="flex justify-between items-center py-4 border-b-4 border-gray-300">
+              <span className="product-name font-bold text-3xl">{getProductName(batchProduct.productId)}</span>
+              <div className="product-details flex gap-12 text-2xl font-medium">
                 <span>Qtd: {batchProduct.quantity}</span>
                 <span>Cor: {batchProduct.selectedColor}</span>
                 <span>Tamanho: {batchProduct.selectedSize}</span>
               </div>
             </div>
           )) || (
-            <div className="text-gray-500 italic text-lg">Nenhum produto especificado</div>
+            <div className="text-gray-500 italic text-3xl">Nenhum produto especificado</div>
           )}
         </div>
       </div>
 
       {/* Additional Information */}
-      <div className="space-y-3 text-lg">
+      <div className="space-y-6 text-2xl">
         <div>
           <strong>Status:</strong> {batch.status === 'cut' ? 'Cortado' : 
                                   batch.status === 'in_production' ? 'Em Produção' : 
@@ -79,8 +79,8 @@ export default function BatchPrintLayout({ batch, products, workshops }: BatchPr
           </div>
         )}
         
-        <div className="mt-6 pt-3 border-t-2 border-gray-300">
-          <div className="flex justify-between text-base text-gray-600 font-medium">
+        <div className="mt-12 pt-6 border-t-4 border-gray-300">
+          <div className="flex justify-between text-xl text-gray-600 font-medium">
             <span>Data de Impressão: {new Date().toLocaleDateString('pt-BR')}</span>
             <span>Sistema de Controle de Produção</span>
           </div>
