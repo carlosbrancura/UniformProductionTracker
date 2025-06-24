@@ -70,7 +70,7 @@ export default function Dashboard() {
           </Button>
         </div>
         
-        <BiweeklyCalendar 
+        <OrganizedCalendar 
           batches={batches} 
           products={products}
           workshops={workshops}
