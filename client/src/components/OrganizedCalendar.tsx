@@ -16,23 +16,25 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
   const [startX, setStartX] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
 
-  // Calculate biweekly period
-  const getWeekStart = (date: Date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day;
-    return new Date(d.setDate(diff));
-  };
+  // Calculate quinzenal period (1-15 and 16-end of month)
+  const dayOfMonth = currentDate.getDate();
+  let periodStart: Date, periodEnd: Date, viewDays: Date[];
+  
+  if (dayOfMonth <= 15) {
+    // First quinzena of month (1st to 15th)
+    periodStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    periodEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 15);
+  } else {
+    // Second quinzena of month (16th to end of month)
+    periodStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 16);
+    const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+    periodEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), lastDayOfMonth);
+  }
 
-  const periodStart = getWeekStart(currentDate);
-  const periodEnd = new Date(periodStart);
-  periodEnd.setDate(periodStart.getDate() + 13); // 14 days total
-
-  const viewDays: Date[] = [];
-  for (let i = 0; i < 14; i++) {
-    const day = new Date(periodStart);
-    day.setDate(periodStart.getDate() + i);
-    viewDays.push(day);
+  // Generate array of days for the actual period
+  viewDays = [];
+  for (let d = new Date(periodStart); d <= periodEnd; d.setDate(d.getDate() + 1)) {
+    viewDays.push(new Date(d));
   }
 
   // Sort workshops by schedule order
