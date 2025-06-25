@@ -57,6 +57,16 @@ This is a full-stack production management system designed for textile and garme
 - Batch history tracking with user attribution
 - Image upload for batch documentation
 - Print-friendly batch documentation
+- Payment status tracking for financial management
+
+### Financial Management Module
+- Workshop payment tracking and invoice generation
+- Time-filtered financial reports (60-day default)
+- Unpaid batch value calculations based on product production values
+- Invoice history and payment status management
+- Detailed workshop financial drill-down views
+- Print-ready financial reports and invoice documents
+- Integration with batch production for seamless payment tracking
 
 ### Calendar Interface
 - Biweekly and monthly calendar views
@@ -114,6 +124,7 @@ This is a full-stack production management system designed for textile and garme
 - **Start Command**: `npm run start`
 
 ## Changelog
+- June 25, 2025: Financial Management Module - added complete financial tracking system with workshop payment management, invoice generation, payment status tracking, and comprehensive reporting
 - June 25, 2025: Calendar layout enhancement - increased bar height by 30%, reduced spacing between workshop lines, reorganized bar content to show "Oficina | LOTE XXX | Product Info"
 - June 24, 2025: UI cleanup - removed view type indicator, simplified title to "Cronograma de Produção", removed print and history from batch modal, auto-update return date when marking as returned
 - June 24, 2025: Monthly view disabled - system now only shows quinzenal (15-day) calendar view per user request

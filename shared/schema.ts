@@ -89,6 +89,31 @@ export const insertBatchSchema = createInsertSchema(batches).omit({ id: true, co
 export const insertBatchProductSchema = createInsertSchema(batchProducts).omit({ id: true });
 export const insertBatchHistorySchema = createInsertSchema(batchHistory).omit({ id: true, timestamp: true });
 
+// Financial invoice schema for tracking workshop payments
+export const invoices = pgTable("invoices", {
+  id: serial("id").primaryKey(),
+  workshopId: integer("workshop_id").notNull().references(() => workshops.id),
+  invoiceNumber: varchar("invoice_number", { length: 100 }).notNull().unique(),
+  issueDate: timestamp("issue_date").notNull().defaultNow(),
+  dueDate: timestamp("due_date").notNull(),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  paidDate: timestamp("paid_date"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, paid, overdue
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Junction table for batches included in invoices
+export const invoiceBatches = pgTable("invoice_batches", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").notNull().references(() => invoices.id),
+  batchId: integer("batch_id").notNull().references(() => batches.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true });
+export const insertInvoiceBatchSchema = createInsertSchema(invoiceBatches).omit({ id: true });
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Product = typeof products.$inferSelect;
@@ -101,3 +126,9 @@ export type BatchProduct = typeof batchProducts.$inferSelect;
 export type InsertBatchProduct = z.infer<typeof insertBatchProductSchema>;
 export type BatchHistory = typeof batchHistory.$inferSelect;
 export type InsertBatchHistory = z.infer<typeof insertBatchHistorySchema>;
+
+// Financial types
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type InvoiceBatch = typeof invoiceBatches.$inferSelect;
+export type InsertInvoiceBatch = z.infer<typeof insertInvoiceBatchSchema>;

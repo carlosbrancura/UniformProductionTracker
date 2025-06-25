@@ -44,6 +44,24 @@ export interface IStorage {
   // Batch History
   getBatchHistory(batchId: number): Promise<BatchHistory[]>;
   addBatchHistory(history: InsertBatchHistory): Promise<BatchHistory>;
+
+  // Financial Management - Invoices
+  getInvoice(id: number): Promise<Invoice | undefined>;
+  getAllInvoices(): Promise<Invoice[]>;
+  getInvoicesByWorkshop(workshopId: number): Promise<Invoice[]>;
+  getInvoicesByDateRange(startDate: Date, endDate: Date): Promise<Invoice[]>;
+  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  updateInvoice(id: number, invoice: Partial<Invoice>): Promise<Invoice | undefined>;
+  deleteInvoice(id: number): Promise<boolean>;
+
+  // Invoice Batches
+  getInvoiceBatches(invoiceId: number): Promise<InvoiceBatch[]>;
+  addBatchesToInvoice(invoiceId: number, batches: InsertInvoiceBatch[]): Promise<InvoiceBatch[]>;
+  removeBatchFromInvoice(invoiceId: number, batchId: number): Promise<boolean>;
+
+  // Financial Reports
+  getUnpaidBatchesByWorkshop(workshopId: number, startDate: Date, endDate: Date): Promise<Batch[]>;
+  getWorkshopFinancialSummary(startDate: Date, endDate: Date): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
