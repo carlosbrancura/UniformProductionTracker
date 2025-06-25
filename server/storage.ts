@@ -1,13 +1,16 @@
 import { 
-  User, InsertUser, 
-  Product, InsertProduct,
-  Workshop, InsertWorkshop,
-  Batch, InsertBatch,
-  BatchHistory, InsertBatchHistory,
-  users, products, workshops, batches, batchHistory, batchProducts
+  users, products, workshops, batches, batchHistory, batchProducts, invoices, invoiceBatches,
+  type User, type InsertUser, 
+  type Product, type InsertProduct,
+  type Workshop, type InsertWorkshop,
+  type Batch, type InsertBatch,
+  type BatchHistory, type InsertBatchHistory,
+  type BatchProduct, type InsertBatchProduct,
+  type Invoice, type InsertInvoice,
+  type InvoiceBatch, type InsertInvoiceBatch
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, gte, lte, isNull, isNotNull, and, or, not, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users

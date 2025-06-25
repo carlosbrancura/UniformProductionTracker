@@ -7,6 +7,7 @@ import Dashboard from "@/pages/Dashboard";
 import Products from "@/pages/Products";
 import Workshops from "@/pages/Workshops";
 import Users from "@/pages/Users";
+import Financial from "@/pages/Financial";
 import Header from "@/components/Header";
 import Navigation from "@/components/Navigation";
 
@@ -27,6 +28,7 @@ function Router() {
           <Route path="/products" component={Products} />
           <Route path="/workshops" component={Workshops} />
           <Route path="/users" component={Users} />
+          <Route path="/financial" component={Financial} />
           <Route>
             <div className="text-center py-12">
               <h1 className="text-2xl font-bold text-slate-900">Página não encontrada</h1>

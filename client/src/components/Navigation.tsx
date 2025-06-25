@@ -8,6 +8,7 @@ export default function Navigation() {
     { path: "/products", label: "Produtos", id: "products" },
     { path: "/workshops", label: "Oficinas", id: "workshops" },
     { path: "/users", label: "Usuários", id: "users" },
+    { path: "/financial", label: "Financeiro", id: "financial" },
   ];
 
   return (
