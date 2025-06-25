@@ -194,8 +194,8 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                   className="relative"
                   style={{ 
                     borderBottom: workshopIndex < sortedWorkshops.length - 1 ? '1px dotted #d1d5db' : 'none',
-                    paddingBottom: workshopIndex < sortedWorkshops.length - 1 ? '8px' : '0',
-                    marginBottom: workshopIndex < sortedWorkshops.length - 1 ? '4px' : '0',
+                    paddingBottom: workshopIndex < sortedWorkshops.length - 1 ? '4px' : '0',
+                    marginBottom: workshopIndex < sortedWorkshops.length - 1 ? '2px' : '0',
                     minHeight: '58px' // Increased height by 30% (45px * 1.3 ≈ 58px)
                   }}
                 >
