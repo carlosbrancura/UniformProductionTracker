@@ -337,6 +337,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateFields.push(`status = $${paramIndex}`);
         params.push(status);
         paramIndex++;
+        
+        // If marking as returned, set actual return date automatically
+        if (status === 'returned') {
+          updateFields.push(`actual_return_date = $${paramIndex}`);
+          params.push(new Date().toISOString().split('T')[0]);
+          paramIndex++;
+        }
       }
       
       if (workshopId !== undefined) {
@@ -351,9 +358,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paramIndex++;
       }
       
-      if (actualReturnDate && actualReturnDate !== "") {
-        updateFields.push(`actual_return_date = $${paramIndex}`);
-        params.push(actualReturnDate);
+      if (expectedReturnDate !== undefined) {
+        updateFields.push(`expected_return_date = $${paramIndex}`);
+        params.push(expectedReturnDate);
         paramIndex++;
       }
 
