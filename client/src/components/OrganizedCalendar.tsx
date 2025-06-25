@@ -195,8 +195,8 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                   style={{ 
                     borderBottom: workshopIndex < sortedWorkshops.length - 1 ? '1px dotted #d1d5db' : 'none',
                     paddingBottom: workshopIndex < sortedWorkshops.length - 1 ? '8px' : '0',
-                    marginBottom: workshopIndex < sortedWorkshops.length - 1 ? '8px' : '0',
-                    minHeight: '45px' // Reduced height for more workshops on screen
+                    marginBottom: workshopIndex < sortedWorkshops.length - 1 ? '4px' : '0',
+                    minHeight: '58px' // Increased height by 30% (45px * 1.3 ≈ 58px)
                   }}
                 >
                   {/* Grid background for reference */}
@@ -226,7 +226,7 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                     return (
                       <div
                         key={batch.id}
-                        className="absolute top-1 rounded-lg p-1 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center h-[40px] border border-white border-opacity-20"
+                        className="absolute top-1 rounded-lg p-1 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center h-[52px] border border-white border-opacity-20"
                         style={{ 
                           backgroundColor: workshop.color,
                           opacity: batch.status === 'returned' ? 0.5 : 1,
@@ -241,7 +241,7 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                             <span className="bg-white text-gray-600 px-1 rounded text-xs mr-1 font-bold">RET</span>
                           )}
                           <span className="truncate">
-                            Lote {batch.code} | {workshop.name} | {batch.productId ? getProductName(batch.productId).substring(0, 15) + (getProductName(batch.productId).length > 15 ? '...' : '') : 'Múltiplos'}
+                            {workshop.name} | LOTE {batch.code} | {batch.productId ? getProductName(batch.productId).substring(0, 15) + (getProductName(batch.productId).length > 15 ? '...' : '') : 'Múltiplos'}
                           </span>
                         </div>
                       </div>
