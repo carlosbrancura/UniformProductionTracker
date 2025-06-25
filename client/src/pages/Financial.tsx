@@ -34,32 +34,15 @@ export default function Financial() {
 
   const { startDate, endDate } = getDateRange();
 
-  // Fetch all workshops for fallback display
-  const { data: allWorkshops = [] } = useQuery({
-    queryKey: ['/api/workshops'],
-  });
-
-  // Fetch workshop financial summary data
-  const { data: financialSummary = [], isLoading } = useQuery({
+  // Fetch workshop financial summary data directly
+  const { data: financialSummary = [], isLoading, error } = useQuery({
     queryKey: ['/api/financial/workshop-summary', startDate.toISOString(), endDate.toISOString()],
     queryFn: async () => {
       const response = await fetch(`/api/financial/workshop-summary?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
       if (!response.ok) throw new Error('Failed to fetch financial summary');
       const data = await response.json();
-      
-      // If no financial data, show all workshops with zero values
-      if (data.length === 0) {
-        return allWorkshops.map((workshop: Workshop) => ({
-          workshopId: workshop.id,
-          workshopName: workshop.name,
-          batchCount: 0,
-          totalUnpaidValue: 0
-        }));
-      }
-      
       return data;
-    },
-    enabled: allWorkshops.length > 0
+    }
   });
 
   // Calculate total unpaid amount across all workshops
@@ -183,6 +166,11 @@ export default function Financial() {
           {isLoading ? (
             <div className="text-center py-8">
               <p className="text-gray-500">Carregando dados financeiros...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-500">Erro ao carregar dados financeiros</p>
+              <p className="text-xs text-gray-400 mt-2">{error.message}</p>
             </div>
           ) : financialSummary.length === 0 ? (
             <div className="text-center py-8">
