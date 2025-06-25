@@ -149,10 +149,8 @@ export default function Financial() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {financialSummary.reduce((sum: number, workshop: any) => 
-                sum + parseInt(workshop.batchCount || 0), 0
-              )}
+            <div className="text-2xl font-bold text-blue-600">
+              {totalBatchCount}
             </div>
             <p className="text-xs text-muted-foreground">
               Aguardando pagamento
@@ -190,35 +188,35 @@ export default function Financial() {
             </div>
           ) : (
             <div className="space-y-3">
-              {financialSummary.map((workshop: any) => (
-                <div
-                  key={workshop.workshopId}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                  onClick={() => handleWorkshopClick(workshop)}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-lg">{workshop.workshopName}</h3>
-                      <Badge variant="secondary">
-                        {workshop.batchCount} lote{workshop.batchCount !== 1 ? 's' : ''}
-                      </Badge>
+              {financialSummary.map((workshop: any) => {
+                const unpaidValue = parseFloat(workshop.totalUnpaidValue?.toString() || '0');
+                const batchCount = parseInt(workshop.batchCount?.toString() || '0');
+                
+                return (
+                  <div
+                    key={workshop.workshopId}
+                    className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => handleWorkshopClick(workshop)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{workshop.workshopName}</h3>
+                        <div className="flex gap-4 text-sm text-gray-600 mt-1">
+                          <span className="font-medium">{batchCount} lotes pendentes</span>
+                          <span>Período: últimos 60 dias</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-red-600">
+                          R$ {unpaidValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-sm text-gray-500">Valor em aberto</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-gray-400 ml-4" />
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Período: {formatDate(startDate)} - {formatDate(endDate)}
-                    </p>
                   </div>
-                  
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-red-600">
-                        R$ {parseFloat(workshop.totalUnpaidValue || 0).toFixed(2)}
-                      </p>
-                      <p className="text-xs text-gray-500">Em aberto</p>
-                    </div>
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
