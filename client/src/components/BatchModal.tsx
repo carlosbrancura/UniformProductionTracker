@@ -135,7 +135,7 @@ export default function BatchModal({ batch, products, workshops, onClose }: Batc
     if (confirm("Tem certeza que deseja excluir este lote? Esta ação não pode ser desfeita.")) {
       deleteMutation.mutate();
     }
-
+  };
 
   const handlePrint = async () => {
     try {
