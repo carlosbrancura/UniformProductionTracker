@@ -46,9 +46,16 @@ export default function Financial() {
   });
 
   // Calculate total unpaid amount across all workshops
-  const totalUnpaidAmount = financialSummary.reduce((sum: number, workshop: any) => 
-    sum + (parseFloat(workshop.totalUnpaidValue) || 0), 0
-  );
+  const totalUnpaidAmount = financialSummary.reduce((sum: number, workshop: any) => {
+    const value = parseFloat(workshop.totalUnpaidValue?.toString() || '0');
+    return sum + value;
+  }, 0);
+
+  // Calculate total batches across all workshops
+  const totalBatchCount = financialSummary.reduce((sum: number, workshop: any) => {
+    const count = parseInt(workshop.batchCount?.toString() || '0');
+    return sum + count;
+  }, 0);
 
   // Handle workshop selection for detailed view
   const handleWorkshopClick = (workshop: any) => {
@@ -110,11 +117,11 @@ export default function Financial() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              R$ {totalUnpaidAmount.toFixed(2)}
+            <div className="text-2xl font-bold text-red-600">
+              R$ {totalUnpaidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground">
-              Período: {formatDate(startDate)} - {formatDate(endDate)}
+              {totalBatchCount} lotes em {financialSummary.length} oficinas
             </p>
           </CardContent>
         </Card>
@@ -126,8 +133,8 @@ export default function Financial() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {financialSummary.length}
+            <div className="text-2xl font-bold text-orange-600">
+              {financialSummary.filter((w: any) => parseFloat(w.totalUnpaidValue) > 0).length}
             </div>
             <p className="text-xs text-muted-foreground">
               Com valores em aberto
@@ -172,10 +179,13 @@ export default function Financial() {
               <p className="text-red-500">Erro ao carregar dados financeiros</p>
               <p className="text-xs text-gray-400 mt-2">{error.message}</p>
             </div>
-          ) : financialSummary.length === 0 ? (
+          ) : !financialSummary || financialSummary.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500">
                 Nenhuma oficina com valores pendentes no período selecionado
+              </p>
+              <p className="text-xs text-gray-400 mt-2">
+                Período: {formatDate(startDate)} - {formatDate(endDate)}
               </p>
             </div>
           ) : (
