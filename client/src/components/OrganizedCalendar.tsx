@@ -194,9 +194,9 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                   className="relative"
                   style={{ 
                     borderBottom: workshopIndex < sortedWorkshops.length - 1 ? '1px dotted #d1d5db' : 'none',
-                    paddingBottom: workshopIndex < sortedWorkshops.length - 1 ? '4px' : '0',
-                    marginBottom: workshopIndex < sortedWorkshops.length - 1 ? '2px' : '0',
-                    minHeight: '58px' // Increased height by 30% (45px * 1.3 ≈ 58px)
+                    paddingBottom: workshopIndex < sortedWorkshops.length - 1 ? '1px' : '0',
+                    marginBottom: workshopIndex < sortedWorkshops.length - 1 ? '1px' : '0',
+                    minHeight: '50px' // Reduced from 58px to make lines more compact
                   }}
                 >
                   {/* Grid background for reference */}
@@ -226,7 +226,7 @@ export default function OrganizedCalendar({ batches, products, workshops, onBatc
                     return (
                       <div
                         key={batch.id}
-                        className="absolute top-1 rounded-lg p-1 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center h-[52px] border border-white border-opacity-20"
+                        className="absolute top-1 rounded-lg p-1 text-white cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm flex items-center h-[44px] border border-white border-opacity-20"
                         style={{ 
                           backgroundColor: workshop.color,
                           opacity: batch.status === 'returned' ? 0.5 : 1,
