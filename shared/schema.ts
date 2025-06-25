@@ -59,6 +59,7 @@ export const batches = pgTable("batches", {
   conferenceResult: text("conference_result"), // ok, problem
   observations: text("observations"),
   imageUrl: text("image_url"),
+  paid: boolean("paid").notNull().default(false), // Payment status for financial tracking
   // Temporary compatibility fields
   productId: integer("product_id"),
   quantity: integer("quantity")
