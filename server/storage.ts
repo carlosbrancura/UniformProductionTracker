@@ -443,6 +443,143 @@ export class DatabaseStorage implements IStorage {
     }).returning();
     return history;
   }
+
+  // Financial Management Implementation
+  async getInvoice(id: number): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+    return invoice || undefined;
+  }
+
+  async getAllInvoices(): Promise<Invoice[]> {
+    return await db.select().from(invoices).orderBy(desc(invoices.createdAt));
+  }
+
+  async getInvoicesByWorkshop(workshopId: number): Promise<Invoice[]> {
+    return await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.workshopId, workshopId))
+      .orderBy(desc(invoices.createdAt));
+  }
+
+  async getInvoicesByDateRange(startDate: Date, endDate: Date): Promise<Invoice[]> {
+    return await db
+      .select()
+      .from(invoices)
+      .where(
+        and(
+          gte(invoices.issueDate, startDate),
+          lte(invoices.issueDate, endDate)
+        )
+      )
+      .orderBy(desc(invoices.issueDate));
+  }
+
+  async createInvoice(invoiceData: InsertInvoice): Promise<Invoice> {
+    const [invoice] = await db
+      .insert(invoices)
+      .values(invoiceData)
+      .returning();
+    return invoice;
+  }
+
+  async updateInvoice(id: number, invoiceData: Partial<Invoice>): Promise<Invoice | undefined> {
+    const [invoice] = await db
+      .update(invoices)
+      .set(invoiceData)
+      .where(eq(invoices.id, id))
+      .returning();
+    return invoice || undefined;
+  }
+
+  async deleteInvoice(id: number): Promise<boolean> {
+    const result = await db.delete(invoices).where(eq(invoices.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getInvoiceBatches(invoiceId: number): Promise<InvoiceBatch[]> {
+    return await db
+      .select()
+      .from(invoiceBatches)
+      .where(eq(invoiceBatches.invoiceId, invoiceId));
+  }
+
+  async addBatchesToInvoice(invoiceId: number, batchData: InsertInvoiceBatch[]): Promise<InvoiceBatch[]> {
+    const result = await db
+      .insert(invoiceBatches)
+      .values(batchData)
+      .returning();
+    return result;
+  }
+
+  async removeBatchFromInvoice(invoiceId: number, batchId: number): Promise<boolean> {
+    const result = await db
+      .delete(invoiceBatches)
+      .where(
+        and(
+          eq(invoiceBatches.invoiceId, invoiceId),
+          eq(invoiceBatches.batchId, batchId)
+        )
+      );
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getUnpaidBatchesByWorkshop(workshopId: number, startDate: Date, endDate: Date): Promise<Batch[]> {
+    return await db
+      .select()
+      .from(batches)
+      .where(
+        and(
+          eq(batches.workshopId, workshopId),
+          eq(batches.paid, false),
+          gte(batches.cutDate, startDate),
+          lte(batches.cutDate, endDate)
+        )
+      )
+      .orderBy(desc(batches.cutDate));
+  }
+
+  async getWorkshopFinancialSummary(startDate: Date, endDate: Date): Promise<any[]> {
+    // First, let's get all workshops with unpaid batches in the date range
+    // We'll calculate values using both the new batchProducts table and legacy productId/quantity fields
+    
+    const result = await db
+      .select({
+        workshopId: batches.workshopId,
+        workshopName: workshops.name,
+        batchCount: sql<number>`count(distinct ${batches.id})`,
+        // Calculate total value from both new batch_products table and legacy batch fields
+        totalUnpaidValue: sql<number>`
+          coalesce(
+            sum(
+              case 
+                when ${batchProducts.quantity} is not null and ${products.productionValue} is not null 
+                then ${batchProducts.quantity} * ${products.productionValue}
+                when ${batches.quantity} is not null 
+                then ${batches.quantity} * coalesce((select production_value from products where id = ${batches.productId}), 50)
+                else 100
+              end
+            ), 
+            0
+          )`
+      })
+      .from(batches)
+      .leftJoin(workshops, eq(batches.workshopId, workshops.id))
+      .leftJoin(batchProducts, eq(batches.id, batchProducts.batchId))
+      .leftJoin(products, eq(batchProducts.productId, products.id))
+      .where(
+        and(
+          eq(batches.paid, false),
+          isNotNull(batches.workshopId),
+          gte(batches.cutDate, startDate),
+          lte(batches.cutDate, endDate)
+        )
+      )
+      .groupBy(batches.workshopId, workshops.name)
+      .having(sql`count(distinct ${batches.id}) > 0`);
+
+    return result;
+  }
 }
 
 export const storage = new DatabaseStorage();

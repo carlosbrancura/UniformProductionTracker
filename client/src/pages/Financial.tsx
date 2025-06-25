@@ -34,14 +34,32 @@ export default function Financial() {
 
   const { startDate, endDate } = getDateRange();
 
+  // Fetch all workshops for fallback display
+  const { data: allWorkshops = [] } = useQuery({
+    queryKey: ['/api/workshops'],
+  });
+
   // Fetch workshop financial summary data
   const { data: financialSummary = [], isLoading } = useQuery({
     queryKey: ['/api/financial/workshop-summary', startDate.toISOString(), endDate.toISOString()],
     queryFn: async () => {
       const response = await fetch(`/api/financial/workshop-summary?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
       if (!response.ok) throw new Error('Failed to fetch financial summary');
-      return response.json();
-    }
+      const data = await response.json();
+      
+      // If no financial data, show all workshops with zero values
+      if (data.length === 0) {
+        return allWorkshops.map((workshop: Workshop) => ({
+          workshopId: workshop.id,
+          workshopName: workshop.name,
+          batchCount: 0,
+          totalUnpaidValue: 0
+        }));
+      }
+      
+      return data;
+    },
+    enabled: allWorkshops.length > 0
   });
 
   // Calculate total unpaid amount across all workshops

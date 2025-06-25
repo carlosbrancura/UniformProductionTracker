@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertUserSchema, insertProductSchema, insertWorkshopSchema, insertBatchSchema, insertBatchHistorySchema } from "@shared/schema";
 import { db, pool } from "./db";
 import { batches, batchHistory, products, batchProducts } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { productsService } from "./products-service";
 import multer from "multer";
 import path from "path";
@@ -453,6 +453,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ imageUrl });
     } catch (error) {
       res.status(500).json({ message: "Failed to upload image" });
+    }
+  });
+
+  // Financial Management Routes
+  
+  // Get workshop financial summary for a date range
+  app.get("/api/financial/workshop-summary", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "Start date and end date are required" });
+      }
+      
+      const summary = await storage.getWorkshopFinancialSummary(
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching workshop financial summary:", error);
+      res.status(500).json({ error: "Failed to fetch workshop financial summary" });
+    }
+  });
+
+  // Get unpaid batches for a specific workshop
+  app.get("/api/financial/unpaid-batches/:workshopId", async (req, res) => {
+    try {
+      const workshopId = parseInt(req.params.workshopId);
+      const { startDate, endDate } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "Start date and end date are required" });
+      }
+      
+      const batches = await storage.getUnpaidBatchesByWorkshop(
+        workshopId,
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+      res.json(batches);
+    } catch (error) {
+      console.error("Error fetching unpaid batches:", error);
+      res.status(500).json({ error: "Failed to fetch unpaid batches" });
+    }
+  });
+
+  // Invoice Management Routes
+  
+  // Get all invoices
+  app.get("/api/invoices", async (req, res) => {
+    try {
+      const invoices = await storage.getAllInvoices();
+      res.json(invoices);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      res.status(500).json({ error: "Failed to fetch invoices" });
+    }
+  });
+
+  // Get invoices for a specific workshop
+  app.get("/api/invoices/workshop/:workshopId", async (req, res) => {
+    try {
+      const workshopId = parseInt(req.params.workshopId);
+      const invoices = await storage.getInvoicesByWorkshop(workshopId);
+      res.json(invoices);
+    } catch (error) {
+      console.error("Error fetching workshop invoices:", error);
+      res.status(500).json({ error: "Failed to fetch workshop invoices" });
+    }
+  });
+
+  // Create new invoice
+  app.post("/api/invoices", async (req, res) => {
+    try {
+      const { batchIds, ...invoiceData } = req.body;
+      
+      // Create the invoice
+      const invoice = await storage.createInvoice(invoiceData);
+      
+      // Add batches to the invoice if provided
+      if (batchIds && batchIds.length > 0) {
+        const invoiceBatches = batchIds.map((batchId: number) => ({
+          invoiceId: invoice.id,
+          batchId,
+          amount: "100.00" // This should be calculated based on batch products
+        }));
+        
+        await storage.addBatchesToInvoice(invoice.id, invoiceBatches);
+        
+        // Mark batches as paid
+        for (const batchId of batchIds) {
+          await storage.updateBatch(batchId, { paid: true });
+        }
+      }
+      
+      res.status(201).json(invoice);
+    } catch (error) {
+      console.error("Error creating invoice:", error);
+      res.status(500).json({ error: "Failed to create invoice" });
+    }
+  });
+
+  // Mark invoice as paid
+  app.patch("/api/invoices/:id/pay", async (req, res) => {
+    try {
+      const invoiceId = parseInt(req.params.id);
+      const updatedInvoice = await storage.updateInvoice(invoiceId, {
+        status: 'paid',
+        paidDate: new Date()
+      });
+      
+      if (!updatedInvoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      res.json(updatedInvoice);
+    } catch (error) {
+      console.error("Error marking invoice as paid:", error);
+      res.status(500).json({ error: "Failed to mark invoice as paid" });
+    }
+  });
+
+  // Get batch products for multiple batches (for financial calculations)
+  app.post("/api/batch-products/multiple", async (req, res) => {
+    try {
+      const { batchIds } = req.body;
+      if (!batchIds || !Array.isArray(batchIds)) {
+        return res.status(400).json({ error: "batchIds array is required" });
+      }
+      
+      // Fetch batch products for multiple batches
+      const batchProductsResult = await db
+        .select()
+        .from(batchProducts)
+        .where(sql`${batchProducts.batchId} = ANY(${batchIds})`);
+      
+      res.json(batchProductsResult);
+    } catch (error) {
+      console.error("Error fetching batch products:", error);
+      res.status(500).json({ error: "Failed to fetch batch products" });
     }
   });
 
