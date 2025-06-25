@@ -1,64 +1,96 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Calendar, DollarSign, FileText, Eye } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { formatDate } from '@/lib/utils';
-import type { Workshop } from '@shared/schema';
-import WorkshopFinancialDetails from '@/components/WorkshopFinancialDetails';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DollarSign, FileText, ChevronRight, Calendar } from "lucide-react";
+import { format, subDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import WorkshopFinancialDetails from "@/components/WorkshopFinancialDetails";
+
+interface FinancialSummary {
+  workshopId: number;
+  workshopName: string;
+  batchCount: string;
+  totalUnpaidValue: string;
+}
 
 /**
  * Financial Management Page
  * 
- * This component provides a comprehensive financial overview for workshop payments.
- * Features:
- * - Time period filtering (last 60 days default)
- * - Workshop summary with unpaid amounts
- * - Drill-down into workshop details
- * - Invoice management and payment tracking
+ * Main dashboard for financial oversight including:
+ * - Workshop payment summary with 60-day default filtering
+ * - Outstanding batch values and counts
+ * - Financial KPI cards (total outstanding, pending workshops, unpaid batches)
+ * - Workshop drill-down navigation for detailed payment management
  */
 export default function Financial() {
-  // State management for date filtering and workshop selection
-  const [selectedPeriod, setSelectedPeriod] = useState('60'); // Days
-  const [selectedWorkshop, setSelectedWorkshop] = useState<Workshop | null>(null);
+  const [selectedWorkshop, setSelectedWorkshop] = useState<any>(null);
+  const [financialSummary, setFinancialSummary] = useState<FinancialSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Calculate date range based on selected period
+  // Date range for financial calculations (default: last 60 days)
   const getDateRange = () => {
     const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(selectedPeriod));
+    const startDate = subDays(endDate, 60);
     return { startDate, endDate };
+  };
+
+  const formatDate = (date: Date) => {
+    return format(date, "dd/MM/yyyy", { locale: ptBR });
   };
 
   const { startDate, endDate } = getDateRange();
 
-  // Fetch workshop financial summary data directly
-  const { data: financialSummary = [], isLoading, error } = useQuery({
-    queryKey: ['/api/financial/workshop-summary', startDate.toISOString(), endDate.toISOString()],
-    queryFn: async () => {
-      const response = await fetch(`/api/financial/workshop-summary?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
-      if (!response.ok) throw new Error('Failed to fetch financial summary');
-      const data = await response.json();
-      return data;
-    }
-  });
+  // Fetch financial data
+  useEffect(() => {
+    const fetchFinancialData = async () => {
+      try {
+        console.log('Iniciando busca de dados financeiros...');
+        setIsLoading(true);
+        setError(null);
+        
+        const url = `/api/financial/workshop-summary?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+        console.log('URL da requisição:', url);
+        
+        const response = await fetch(url);
+        console.log('Status da resposta:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Dados recebidos:', data);
+        
+        setFinancialSummary(data || []);
+      } catch (err) {
+        console.error('Erro ao buscar dados financeiros:', err);
+        setError(err instanceof Error ? err.message : 'Erro desconhecido');
+        setFinancialSummary([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Calculate total unpaid amount across all workshops
-  const totalUnpaidAmount = financialSummary.reduce((sum: number, workshop: any) => {
-    const value = parseFloat(workshop.totalUnpaidValue?.toString() || '0');
+    fetchFinancialData();
+  }, []); // Remove dependency to prevent loops
+
+  // Calculate summary values
+  const totalUnpaidAmount = financialSummary.reduce((sum, workshop) => {
+    const value = parseFloat(workshop.totalUnpaidValue || '0');
     return sum + value;
   }, 0);
 
-  // Calculate total batches across all workshops
-  const totalBatchCount = financialSummary.reduce((sum: number, workshop: any) => {
-    const count = parseInt(workshop.batchCount?.toString() || '0');
+  const totalBatchCount = financialSummary.reduce((sum, workshop) => {
+    const count = parseInt(workshop.batchCount || '0');
     return sum + count;
   }, 0);
 
+  const workshopsWithDebt = financialSummary.filter(workshop => 
+    parseFloat(workshop.totalUnpaidValue || '0') > 0
+  ).length;
+
   // Handle workshop selection for detailed view
-  const handleWorkshopClick = (workshop: any) => {
+  const handleWorkshopClick = (workshop: FinancialSummary) => {
     setSelectedWorkshop(workshop);
   };
 
@@ -79,9 +111,11 @@ export default function Financial() {
     );
   }
 
+  console.log('Renderizando componente Financial. Loading:', isLoading, 'Error:', error, 'Data:', financialSummary);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Page Header with Title and Period Filter */}
+      {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestão Financeira</h1>
@@ -90,21 +124,10 @@ export default function Financial() {
           </p>
         </div>
 
-        {/* Period Selection Filter */}
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-gray-500" />
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="30">Últimos 30 dias</SelectItem>
-              <SelectItem value="60">Últimos 60 dias</SelectItem>
-              <SelectItem value="90">Últimos 90 dias</SelectItem>
-              <SelectItem value="180">Últimos 6 meses</SelectItem>
-              <SelectItem value="365">Último ano</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Period Info */}
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Calendar className="h-4 w-4" />
+          <span>Período: {formatDate(startDate)} - {formatDate(endDate)}</span>
         </div>
       </div>
 
@@ -134,7 +157,7 @@ export default function Financial() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {financialSummary.filter((w: any) => parseFloat(w.totalUnpaidValue) > 0).length}
+              {workshopsWithDebt}
             </div>
             <p className="text-xs text-muted-foreground">
               Com valores em aberto
@@ -170,12 +193,19 @@ export default function Financial() {
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
               <p className="text-gray-500">Carregando dados financeiros...</p>
             </div>
           ) : error ? (
             <div className="text-center py-8">
-              <p className="text-red-500">Erro ao carregar dados financeiros</p>
-              <p className="text-xs text-gray-400 mt-2">{error.message}</p>
+              <p className="text-red-500 mb-2">Erro ao carregar dados financeiros</p>
+              <p className="text-xs text-gray-400">{error}</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Tentar novamente
+              </button>
             </div>
           ) : !financialSummary || financialSummary.length === 0 ? (
             <div className="text-center py-8">
@@ -188,9 +218,9 @@ export default function Financial() {
             </div>
           ) : (
             <div className="space-y-3">
-              {financialSummary.map((workshop: any) => {
-                const unpaidValue = parseFloat(workshop.totalUnpaidValue?.toString() || '0');
-                const batchCount = parseInt(workshop.batchCount?.toString() || '0');
+              {financialSummary.map((workshop) => {
+                const unpaidValue = parseFloat(workshop.totalUnpaidValue || '0');
+                const batchCount = parseInt(workshop.batchCount || '0');
                 
                 return (
                   <div
