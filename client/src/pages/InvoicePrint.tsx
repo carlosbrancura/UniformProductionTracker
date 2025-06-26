@@ -31,32 +31,45 @@ export default function InvoicePrint() {
     enabled: !!invoice?.workshopId
   });
 
-  // Fetch batch details and products for each batch
-  const batchIds = invoiceBatches?.length ? invoiceBatches.map((ib: any) => ib.batchId) : [];
-  
-  const batchQueries = batchIds.map((batchId: number) => 
-    useQuery({
-      queryKey: ['/api/batches', batchId],
-      enabled: batchIds.length > 0 && !isNaN(batchId)
-    })
-  );
-
-  const batchProductQueries = batchIds.map((batchId: number) => 
-    useQuery({
-      queryKey: ['/api/batch-products/batch', batchId],
-      enabled: batchIds.length > 0 && !isNaN(batchId)
-    })
-  );
+  // Fetch batch details using a single query
+  const { data: batchDetails } = useQuery({
+    queryKey: ['/api/invoice-batch-details', invoiceId],
+    queryFn: async () => {
+      if (!invoiceBatches?.length) return [];
+      
+      const results = await Promise.all(
+        invoiceBatches.map(async (ib: any) => {
+          const batchId = ib.batchId;
+          if (isNaN(batchId)) return null;
+          
+          const [batchResponse, productsResponse] = await Promise.all([
+            fetch(`/api/batches/${batchId}`),
+            fetch(`/api/batch-products/batch/${batchId}`)
+          ]);
+          
+          if (!batchResponse.ok || !productsResponse.ok) return null;
+          
+          const batch = await batchResponse.json();
+          const products = await productsResponse.json();
+          
+          return { ...batch, products };
+        })
+      );
+      
+      return results.filter(Boolean);
+    },
+    enabled: !!invoiceBatches?.length
+  });
 
   // Auto-print when page loads
   useEffect(() => {
-    if (!invoiceLoading && !batchesLoading && invoice) {
+    if (!invoiceLoading && !batchesLoading && invoice && batchDetails) {
       const timer = setTimeout(() => {
         window.print();
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [invoiceLoading, batchesLoading, invoice]);
+  }, [invoiceLoading, batchesLoading, invoice, batchDetails]);
 
   if (invoiceLoading || batchesLoading) {
     return (
@@ -87,15 +100,8 @@ export default function InvoicePrint() {
     );
   }
 
-  // Combine batch data with products
-  const batchesWithProducts = batchIds.map((batchId: number, index: number) => {
-    const batchData = batchQueries[index]?.data;
-    const batchProducts = batchProductQueries[index]?.data || [];
-    return {
-      ...batchData,
-      products: batchProducts
-    };
-  }).filter(batch => batch && batch.id);
+  // Use batch details from the single query
+  const batchesWithProducts = batchDetails || [];
 
   // Helper function to get product abbreviation
   const getProductAbbreviation = (productName: string) => {
