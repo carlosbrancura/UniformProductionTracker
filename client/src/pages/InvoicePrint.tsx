@@ -1,7 +1,5 @@
 import { useParams } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { useEffect } from 'react';
 import type { Invoice, Workshop, Product, Batch, BatchProduct } from '@shared/schema';
 
@@ -265,11 +263,11 @@ export default function InvoicePrint() {
             <div className="section-title">Dados da Fatura</div>
             <div className="info-row">
               <span className="label">Emissão:</span>
-              {format(new Date(invoice.issueDate), 'dd/MM/yyyy', { locale: ptBR })}
+              {invoice.issueDate ? format(new Date(invoice.issueDate), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}
             </div>
             <div className="info-row">
               <span className="label">Vencto:</span>
-              {format(new Date(invoice.dueDate), 'dd/MM/yyyy', { locale: ptBR })}
+              {invoice.dueDate ? format(new Date(invoice.dueDate), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}
             </div>
             <div className="info-row">
               <span className="label">Status:</span>
@@ -317,7 +315,7 @@ export default function InvoicePrint() {
 
                 return (
                   <tr key={`${batch.id}-${batchProduct.id}`}>
-                    <td>{batch.code}</td>
+                    <td>{batch.code || 'N/A'}</td>
                     <td>{getProductAbbreviation(product?.name || 'N/A')}</td>
                     <td>{batchProduct.selectedColor || '-'}</td>
                     <td>{batchProduct.selectedSize || '-'}</td>
@@ -355,7 +353,7 @@ export default function InvoicePrint() {
 
         {/* Footer */}
         <div className="footer">
-          <p>Fatura gerada automaticamente - {format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
+          <p>Fatura gerada automaticamente - {new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR')}</p>
         </div>
       </div>
     </>
