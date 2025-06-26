@@ -130,6 +130,9 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
       return;
     }
     
+    // Update the form to include selected batches before submission
+    form.setValue('selectedBatches', selectedBatches);
+    
     // Force submission with selected batches
     const submissionData = { ...data, selectedBatches };
     console.log('Attempting to create invoice with data:', submissionData);
@@ -144,6 +147,11 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
         ? [...prev, batchId]
         : prev.filter(id => id !== batchId);
       console.log('New selected batches:', newSelection);
+      
+      // Update form validation
+      form.setValue('selectedBatches', newSelection);
+      form.trigger('selectedBatches');
+      
       return newSelection;
     });
   };
@@ -162,7 +170,10 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="text-xs text-blue-600 p-2 bg-blue-50 rounded">
-            Debug: Workshop = {JSON.stringify(workshop)}, Selected = {selectedBatches.length}
+            Debug: Workshop = {JSON.stringify(workshop)}<br/>
+            Selected = {selectedBatches.length}<br/>
+            Form Valid = {form.formState.isValid ? 'YES' : 'NO'}<br/>
+            Form Errors = {JSON.stringify(form.formState.errors)}
           </div>
           {/* Invoice Details */}
           <div className="space-y-4">
@@ -274,7 +285,17 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
             <Button 
               type="submit" 
               disabled={createInvoiceMutation.isPending || selectedBatches.length === 0}
-              onClick={() => console.log('=== BUTTON CLICKED ===', { selectedBatches, formValid: form.formState.isValid })}
+              onClick={() => {
+                console.log('=== BUTTON CLICKED ===', { 
+                  selectedBatches, 
+                  formValid: form.formState.isValid,
+                  formErrors: form.formState.errors,
+                  formValues: form.getValues()
+                });
+                // Force update form validation
+                form.setValue('selectedBatches', selectedBatches);
+                form.trigger();
+              }}
             >
               {createInvoiceMutation.isPending ? 'Gerando...' : 'Gerar Fatura'}
             </Button>
