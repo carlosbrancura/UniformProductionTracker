@@ -583,12 +583,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "batchIds array is required" });
       }
       
-      // Fetch batch products for multiple batches
+      console.log('Fetching batch products for batch IDs:', batchIds);
+      
+      // Convert to integers and use inArray instead of SQL ANY
+      const validBatchIds = batchIds.map(id => parseInt(id.toString())).filter(id => !isNaN(id));
+      
+      if (validBatchIds.length === 0) {
+        return res.json([]);
+      }
+      
       const batchProductsResult = await db
         .select()
         .from(batchProducts)
-        .where(sql`${batchProducts.batchId} = ANY(${batchIds})`);
+        .where(inArray(batchProducts.batchId, validBatchIds));
       
+      console.log('Found batch products:', batchProductsResult);
       res.json(batchProductsResult);
     } catch (error) {
       console.error("Error fetching batch products:", error);

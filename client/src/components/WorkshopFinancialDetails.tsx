@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Printer, CreditCard, Calendar, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -99,7 +99,7 @@ export default function WorkshopFinancialDetails({
     };
 
     fetchBatchProducts();
-  }, [unpaidBatches.length, unpaidBatches.map(b => b.id).join(',')]);
+  }, [unpaidBatches.length, unpaidBatches.map((b: any) => b.id).join(',')]);
 
   // Mark batch as paid mutation
   const markAsPaidMutation = useMutation({
@@ -146,7 +146,7 @@ export default function WorkshopFinancialDetails({
     }
     
     return batchProducts.reduce((total: number, bp: BatchProduct) => {
-      const product = products.find((p: Product) => p.id === bp.productId);
+      const product = (products as any[]).find((p: any) => p.id === bp.productId);
       const productValue = parseFloat(product?.productionValue?.toString() || '50');
       return total + (bp.quantity * productValue);
     }, 0);
