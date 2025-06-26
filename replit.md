@@ -124,6 +124,7 @@ This is a full-stack production management system designed for textile and garme
 - **Start Command**: `npm run start`
 
 ## Changelog
+- June 26, 2025: Workshop Financial Details - reorganized layout with button repositioning, removed print report button, changed to show all batches with payment status, added pagination breaks every 15 items
 - June 26, 2025: Invoice Print System - removed problematic print functionality, disabled print buttons temporarily until reimplementation
 - June 25, 2025: Financial Management Module - completed financial tracking system with workshop payment management, working summary calculations, proper value display, and comprehensive reporting interface
 - June 25, 2025: Calendar layout enhancement - increased bar height by 30%, reduced spacing between workshop lines, reorganized bar content to show "Oficina | LOTE XXX | Product Info"
