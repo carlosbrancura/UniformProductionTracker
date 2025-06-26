@@ -286,21 +286,12 @@ export default function WorkshopFinancialDetails({
                           {batch.status === 'returned' ? 'Retornado' : 'Em Produção'}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-green-600">
-                            R$ {batchValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                          <p className="text-xs text-gray-500">Valor do lote</p>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleMarkAsPaid(batch.id)}
-                          disabled={markAsPaidMutation.isPending}
-                        >
-                          <CreditCard className="h-4 w-4 mr-1" />
-                          Marcar como Pago
-                        </Button>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-green-600">
+                          R$ {batchValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-xs text-gray-500">Valor do lote</p>
+                        <p className="text-xs text-blue-600 mt-1">Pagamento via fatura</p>
                       </div>
                     </div>
 

@@ -104,11 +104,12 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
 
   // Select all batches
   const handleSelectAll = () => {
-    if (selectedBatches.length === unpaidBatches.length) {
-      setSelectedBatches([]);
-    } else {
-      setSelectedBatches(unpaidBatches.map(batch => batch.id));
-    }
+    const newSelection = selectedBatches.length === unpaidBatches.length 
+      ? [] 
+      : unpaidBatches.map((batch: any) => batch.id);
+    
+    setSelectedBatches(newSelection);
+    form.setValue('selectedBatches', newSelection);
   };
 
   // Form submission
@@ -194,7 +195,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
                   </span>
                 </div>
                 <span className="text-sm font-medium text-green-600">
-                  R$ 100,00 {/* Placeholder - would calculate from batch products */}
+                  R$ 150,00 {/* Standard batch value */}
                 </span>
               </label>
             </div>

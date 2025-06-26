@@ -592,10 +592,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      const batchProductsResult = await db
-        .select()
-        .from(batchProducts)
-        .where(inArray(batchProducts.batchId, validBatchIds));
+      // Use a simple loop approach for IN clause
+      const batchProductsResult = [];
+      for (const batchId of validBatchIds) {
+        const products = await db
+          .select()
+          .from(batchProducts)
+          .where(eq(batchProducts.batchId, batchId));
+        batchProductsResult.push(...products);
+      }
       
       console.log('Found batch products:', batchProductsResult);
       res.json(batchProductsResult);
