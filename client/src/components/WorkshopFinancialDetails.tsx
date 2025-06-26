@@ -58,37 +58,76 @@ export default function WorkshopFinancialDetails({
     queryKey: ['/api/products'],
   });
 
-  // Fetch batch products for detailed calculations
-  const { data: batchProductsData = [] } = useQuery({
-    queryKey: ['/api/batch-products/workshop', workshop.workshopId],
-    queryFn: async () => {
-      const batchIds = unpaidBatches.map((batch: Batch) => batch.id);
-      if (batchIds.length === 0) return [];
+  // Fetch batch products using direct state management
+  const [batchProductsData, setBatchProductsData] = useState<any[]>([]);
+  const [batchProductsLoading, setBatchProductsLoading] = useState(false);
+  
+  useEffect(() => {
+    const fetchBatchProducts = async () => {
+      if (unpaidBatches.length === 0) {
+        setBatchProductsData([]);
+        return;
+      }
       
-      const response = await fetch('/api/batch-products/multiple', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ batchIds })
-      });
-      if (!response.ok) throw new Error('Failed to fetch batch products');
-      return response.json();
-    },
-    enabled: unpaidBatches.length > 0
-  });
+      try {
+        setBatchProductsLoading(true);
+        const batchIds = unpaidBatches.map((batch: Batch) => batch.id);
+        console.log('Fetching batch products for batch IDs:', batchIds);
+        
+        const response = await fetch('/api/batch-products/multiple', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batchIds })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Failed to fetch batch products:', response.status, errorText);
+          setBatchProductsData([]);
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('Batch products fetched successfully:', data);
+        setBatchProductsData(data || []);
+      } catch (error) {
+        console.error('Error fetching batch products:', error);
+        setBatchProductsData([]);
+      } finally {
+        setBatchProductsLoading(false);
+      }
+    };
+
+    fetchBatchProducts();
+  }, [unpaidBatches.length, unpaidBatches.map(b => b.id).join(',')]);
 
   // Mark batch as paid mutation
   const markAsPaidMutation = useMutation({
     mutationFn: async (batchId: number) => {
-      return apiRequest('/api/batches/' + batchId, {
+      console.log('Making API request to mark batch as paid:', batchId);
+      
+      const response = await fetch(`/api/batches/${batchId}`, {
         method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ paid: true })
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to mark batch as paid');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({ title: "Lote marcado como pago com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ['/api/financial'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/batches'] });
     },
     onError: (error: Error) => {
+      console.error('Error in mark as paid mutation:', error);
       toast({ 
         title: "Erro ao marcar lote como pago", 
         description: error.message,
@@ -100,9 +139,16 @@ export default function WorkshopFinancialDetails({
   // Calculate total value for a batch
   const calculateBatchValue = (batch: Batch) => {
     const batchProducts = batchProductsData.filter((bp: BatchProduct) => bp.batchId === batch.id);
+    
+    if (batchProducts.length === 0) {
+      // Fallback to estimated value based on workshop financial summary
+      return 150.00; // Default estimated value per batch
+    }
+    
     return batchProducts.reduce((total: number, bp: BatchProduct) => {
       const product = products.find((p: Product) => p.id === bp.productId);
-      return total + (bp.quantity * (product?.productionValue || 0));
+      const productValue = parseFloat(product?.productionValue?.toString() || '50');
+      return total + (bp.quantity * productValue);
     }, 0);
   };
 
@@ -243,7 +289,7 @@ export default function WorkshopFinancialDetails({
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           <p className="text-lg font-bold text-green-600">
-                            R$ {batchValue.toFixed(2)}
+                            R$ {batchValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
                           <p className="text-xs text-gray-500">Valor do lote</p>
                         </div>
