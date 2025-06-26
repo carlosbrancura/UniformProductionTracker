@@ -50,12 +50,9 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     mode: 'onChange'
   });
 
-  // Create invoice mutation - using direct fetch
+  // Create invoice mutation
   const createInvoiceMutation = useMutation({
     mutationFn: async (data: InvoiceFormData) => {
-      console.log('Creating invoice with data:', data);
-      console.log('Selected batches:', selectedBatches);
-      
       const invoiceData = {
         workshopId: workshop.workshopId || workshop.id,
         invoiceNumber: data.invoiceNumber,
@@ -66,8 +63,6 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
         batchIds: selectedBatches
       };
 
-      console.log('Sending invoice data:', invoiceData);
-
       const response = await fetch('/api/invoices', {
         method: 'POST',
         headers: { 
@@ -77,17 +72,12 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
         body: JSON.stringify(invoiceData)
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Response error:', errorText);
         throw new Error(`Erro ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('Invoice created successfully:', result);
       return result;
     },
     onSuccess: (data) => {
@@ -113,15 +103,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
   });
 
   const onSubmit = (data: InvoiceFormData) => {
-    console.log('=== INVOICE FORM SUBMIT ===');
-    console.log('Form submitted with data:', data);
-    console.log('Selected batches at submit:', selectedBatches);
-    console.log('Workshop object:', workshop);
-    console.log('Form errors:', form.formState.errors);
-    console.log('Form is valid:', form.formState.isValid);
-    
     if (selectedBatches.length === 0) {
-      console.log('No batches selected, showing error');
       toast({
         title: "Erro",
         description: "Selecione pelo menos um lote para gerar a fatura",
@@ -133,20 +115,17 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     // Update the form to include selected batches before submission
     form.setValue('selectedBatches', selectedBatches);
     
-    // Force submission with selected batches
+    // Submit with selected batches
     const submissionData = { ...data, selectedBatches };
-    console.log('Attempting to create invoice with data:', submissionData);
     createInvoiceMutation.mutate(submissionData);
   };
 
   // Handle batch selection
   const handleBatchSelection = (batchId: number, checked: boolean) => {
-    console.log('Batch selection changed:', batchId, checked);
     setSelectedBatches(prev => {
       const newSelection = checked 
         ? [...prev, batchId]
         : prev.filter(id => id !== batchId);
-      console.log('New selected batches:', newSelection);
       
       // Update form validation
       form.setValue('selectedBatches', newSelection);
@@ -169,12 +148,6 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     <div className="space-y-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="text-xs text-blue-600 p-2 bg-blue-50 rounded">
-            Debug: Workshop = {JSON.stringify(workshop)}<br/>
-            Selected = {selectedBatches.length}<br/>
-            Form Valid = {form.formState.isValid ? 'YES' : 'NO'}<br/>
-            Form Errors = {JSON.stringify(form.formState.errors)}
-          </div>
           {/* Invoice Details */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Detalhes da Fatura</h3>
@@ -285,17 +258,6 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
             <Button 
               type="submit" 
               disabled={createInvoiceMutation.isPending || selectedBatches.length === 0}
-              onClick={() => {
-                console.log('=== BUTTON CLICKED ===', { 
-                  selectedBatches, 
-                  formValid: form.formState.isValid,
-                  formErrors: form.formState.errors,
-                  formValues: form.getValues()
-                });
-                // Force update form validation
-                form.setValue('selectedBatches', selectedBatches);
-                form.trigger();
-              }}
             >
               {createInvoiceMutation.isPending ? 'Gerando...' : 'Gerar Fatura'}
             </Button>

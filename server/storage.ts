@@ -65,6 +65,9 @@ export interface IStorage {
   // Financial Reports
   getUnpaidBatchesByWorkshop(workshopId: number, startDate: Date, endDate: Date): Promise<Batch[]>;
   getWorkshopFinancialSummary(startDate: Date, endDate: Date): Promise<any[]>;
+  
+  // Batch Products
+  getBatchProducts(batchId: number): Promise<BatchProduct[]>;
 }
 
 export class DatabaseStorage implements IStorage {

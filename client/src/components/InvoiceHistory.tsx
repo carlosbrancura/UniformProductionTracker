@@ -23,6 +23,7 @@ interface InvoiceHistoryProps {
 export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [printingInvoice, setPrintingInvoice] = useState<Invoice | null>(null);
 
   // Fetch invoices for this workshop
   const { data: invoices = [], isLoading } = useQuery({
@@ -201,6 +202,14 @@ export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
           </div>
         ))}
       </div>
+
+      {/* Print Invoice Modal */}
+      {printingInvoice && (
+        <InvoicePrintView 
+          invoice={printingInvoice}
+          onClose={() => setPrintingInvoice(null)}
+        />
+      )}
     </div>
   );
 }
