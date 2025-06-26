@@ -206,6 +206,9 @@ export default function WorkshopFinancialDetails({
               workshop={workshop}
               unpaidBatches={unpaidBatches}
               onClose={() => setShowInvoiceForm(false)}
+              showPrintPage={(invoice) => {
+                console.log('Invoice created, should show print page:', invoice);
+              }}
             />
           </DialogContent>
         </Dialog>

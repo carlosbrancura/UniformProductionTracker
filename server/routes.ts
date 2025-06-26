@@ -551,34 +551,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Update invoice data with calculated total and proper date conversion
-      const finalInvoiceData = {
-        workshopId: invoiceData.workshopId,
-        invoiceNumber: invoiceData.invoiceNumber,
-        dueDate: new Date(invoiceData.dueDate),
-        totalAmount: totalAmount.toFixed(2),
-        notes: invoiceData.notes || '',
-        issueDate: new Date(),
-        status: 'pending' as const
-      };
+      // Create invoice using direct SQL to avoid date conversion issues
+      const result = await pool.query(`
+        INSERT INTO invoices (workshop_id, invoice_number, due_date, total_amount, notes, issue_date, status, created_at)
+        VALUES ($1, $2, $3::date, $4::decimal, $5, NOW(), $6, NOW())
+        RETURNING id, workshop_id, invoice_number, due_date, total_amount, notes, issue_date, status, created_at
+      `, [
+        invoiceData.workshopId,
+        invoiceData.invoiceNumber,
+        invoiceData.dueDate,
+        totalAmount.toFixed(2),
+        invoiceData.notes || '',
+        'pending'
+      ]);
       
-      console.log('Final invoice data before insert:', finalInvoiceData);
-      
-      // Create the invoice
-      const invoice = await storage.createInvoice(finalInvoiceData);
+      const invoice = result.rows[0];
+      console.log('Invoice created successfully:', invoice);
       
       // Add batches to the invoice if provided
       if (batchIds && batchIds.length > 0) {
-        const invoiceBatches = batchIds.map((batchId: number) => ({
-          invoiceId: invoice.id,
-          batchId
-        }));
-        
-        await storage.addBatchesToInvoice(invoice.id, invoiceBatches);
-        
-        // Mark batches as paid
         for (const batchId of batchIds) {
-          await storage.updateBatch(batchId, { paid: true });
+          // Insert invoice batch relationship
+          await pool.query(`
+            INSERT INTO invoice_batches (invoice_id, batch_id, amount)
+            VALUES ($1, $2, $3)
+          `, [invoice.id, batchId, '0.00']);
+          
+          // Mark batch as paid
+          await pool.query(`
+            UPDATE batches SET paid = true WHERE id = $1
+          `, [batchId]);
         }
       }
       
