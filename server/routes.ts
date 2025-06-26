@@ -552,10 +552,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create invoice using direct SQL to avoid date conversion issues
+      console.log('Attempting to insert invoice with:', {
+        workshopId: invoiceData.workshopId,
+        invoiceNumber: invoiceData.invoiceNumber,
+        dueDate: invoiceData.dueDate,
+        totalAmount: totalAmount.toFixed(2),
+        notes: invoiceData.notes || ''
+      });
+
       const result = await pool.query(`
-        INSERT INTO invoices (workshop_id, invoice_number, due_date, total_amount, notes, issue_date, status, created_at)
-        VALUES ($1, $2, $3::date, $4::decimal, $5, NOW(), $6, NOW())
-        RETURNING id, workshop_id, invoice_number, due_date, total_amount, notes, issue_date, status, created_at
+        INSERT INTO invoices (workshop_id, invoice_number, due_date, total_amount, notes, issue_date, status)
+        VALUES ($1, $2, $3::date, $4::numeric, $5, NOW(), $6)
+        RETURNING *
       `, [
         invoiceData.workshopId,
         invoiceData.invoiceNumber,
