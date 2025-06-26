@@ -38,34 +38,53 @@ export default function InvoicePrint() {
     queryKey: ['/api/products']
   });
 
-  // Fetch batch details
+  // Fetch batch details with proper validation
   const { data: batchDetails, isLoading: batchLoading } = useQuery<BatchWithProducts[]>({
-    queryKey: ['/api/batch-details', invoiceBatches],
+    queryKey: ['/api/batch-details', invoiceBatches?.map(ib => ib.batchId)],
     queryFn: async () => {
       if (!invoiceBatches?.length) return [];
       
+      console.log('Fetching batch details for:', invoiceBatches);
+      
       const results = await Promise.all(
         invoiceBatches.map(async (ib) => {
+          if (!ib.batchId || ib.batchId === undefined) {
+            console.error('Invalid batch ID:', ib);
+            return null;
+          }
+          
           try {
+            console.log(`Fetching batch ${ib.batchId} and its products`);
             const [batchResponse, productsResponse] = await Promise.all([
               fetch(`/api/batches/${ib.batchId}`),
               fetch(`/api/batch-products/batch/${ib.batchId}`)
             ]);
             
-            if (!batchResponse.ok || !productsResponse.ok) return null;
+            console.log(`Batch ${ib.batchId} response:`, batchResponse.status);
+            console.log(`Products ${ib.batchId} response:`, productsResponse.status);
+            
+            if (!batchResponse.ok || !productsResponse.ok) {
+              console.error(`Failed to fetch data for batch ${ib.batchId}`);
+              return null;
+            }
             
             const batch = await batchResponse.json();
             const batchProducts = await productsResponse.json();
             
+            console.log(`Batch ${ib.batchId} data:`, batch);
+            console.log(`Products for batch ${ib.batchId}:`, batchProducts);
+            
             return { ...batch, products: batchProducts };
           } catch (error) {
-            console.error('Error fetching batch data:', error);
+            console.error(`Error fetching batch ${ib.batchId}:`, error);
             return null;
           }
         })
       );
       
-      return results.filter((batch): batch is BatchWithProducts => batch !== null);
+      const validResults = results.filter((batch): batch is BatchWithProducts => batch !== null);
+      console.log('Valid batch results:', validResults);
+      return validResults;
     },
     enabled: !!invoiceBatches?.length
   });
@@ -263,11 +282,11 @@ export default function InvoicePrint() {
             <div className="section-title">Dados da Fatura</div>
             <div className="info-row">
               <span className="label">Emissão:</span>
-              {invoice.issueDate ? format(new Date(invoice.issueDate), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}
+              {invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString('pt-BR') : 'N/A'}
             </div>
             <div className="info-row">
               <span className="label">Vencto:</span>
-              {invoice.dueDate ? format(new Date(invoice.dueDate), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}
+              {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('pt-BR') : 'N/A'}
             </div>
             <div className="info-row">
               <span className="label">Status:</span>
