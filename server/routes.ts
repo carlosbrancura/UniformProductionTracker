@@ -527,17 +527,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new invoice
   app.post("/api/invoices", async (req, res) => {
     try {
+      console.log('Creating invoice with data:', req.body);
       const { batchIds, ...invoiceData } = req.body;
       
+      // Calculate total amount from batches
+      let totalAmount = 0;
+      if (batchIds && batchIds.length > 0) {
+        for (const batchId of batchIds) {
+          // Get batch products for this batch
+          const batchProductsResult = await db
+            .select()
+            .from(batchProducts)
+            .innerJoin(products, eq(batchProducts.productId, products.id))
+            .where(eq(batchProducts.batchId, batchId));
+          
+          // Calculate batch value
+          const batchValue = batchProductsResult.reduce((total, bp) => {
+            const productValue = parseFloat(bp.products.productionValue?.toString() || '0');
+            return total + (bp.batch_products.quantity * productValue);
+          }, 0);
+          
+          totalAmount += batchValue;
+        }
+      }
+      
+      // Update invoice data with calculated total
+      const finalInvoiceData = {
+        ...invoiceData,
+        totalAmount: totalAmount.toFixed(2),
+        issueDate: new Date(),
+        status: 'pending'
+      };
+      
       // Create the invoice
-      const invoice = await storage.createInvoice(invoiceData);
+      const invoice = await storage.createInvoice(finalInvoiceData);
       
       // Add batches to the invoice if provided
       if (batchIds && batchIds.length > 0) {
         const invoiceBatches = batchIds.map((batchId: number) => ({
           invoiceId: invoice.id,
-          batchId,
-          amount: "100.00" // This should be calculated based on batch products
+          batchId
         }));
         
         await storage.addBatchesToInvoice(invoice.id, invoiceBatches);
