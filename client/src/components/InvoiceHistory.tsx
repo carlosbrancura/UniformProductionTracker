@@ -106,9 +106,8 @@ export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
   };
 
   const handlePrintInvoice = (invoice: Invoice) => {
-    // Open print page in new tab
-    const printUrl = `/invoice-print/${invoice.id}`;
-    window.open(printUrl, '_blank');
+    // Temporarily disabled - print functionality will be reimplemented
+    console.log('Print function temporarily disabled for invoice:', invoice.id);
   };
 
   if (isLoading) {
