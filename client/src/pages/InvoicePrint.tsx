@@ -4,59 +4,106 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useEffect } from 'react';
 
+interface Invoice {
+  id: number;
+  workshopId: number;
+  invoiceNumber: string;
+  issueDate: string;
+  dueDate: string;
+  totalAmount: string;
+  status: 'pending' | 'paid';
+  notes?: string;
+}
+
+interface Workshop {
+  id: number;
+  name: string;
+  manager: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  productionValue: string;
+}
+
+interface BatchProduct {
+  id: number;
+  productId: number;
+  quantity: number;
+  selectedColor: string;
+  selectedSize: string;
+}
+
+interface Batch {
+  id: number;
+  code: string;
+  cutDate: string;
+  expectedReturnDate: string;
+  products: BatchProduct[];
+}
+
 export default function InvoicePrint() {
   const { id } = useParams();
   const invoiceId = parseInt(id || '0');
   
   // Fetch invoice data
-  const { data: invoice, isLoading: invoiceLoading } = useQuery({
+  const { data: invoice, isLoading: invoiceLoading } = useQuery<Invoice>({
     queryKey: ['/api/invoices', invoiceId],
     enabled: !!invoiceId && !isNaN(invoiceId)
   });
 
   // Fetch invoice batches
-  const { data: invoiceBatches, isLoading: batchesLoading } = useQuery({
+  const { data: invoiceBatches, isLoading: batchesLoading } = useQuery<Array<{batchId: number}>>({
     queryKey: ['/api/invoices', invoiceId, 'batches'],
     enabled: !!invoiceId && !isNaN(invoiceId)
   });
 
   // Fetch products
-  const { data: products } = useQuery({
+  const { data: products } = useQuery<Product[]>({
     queryKey: ['/api/products']
   });
 
   // Fetch workshop
-  const { data: workshop } = useQuery({
+  const { data: workshop } = useQuery<Workshop>({
     queryKey: ['/api/workshops', invoice?.workshopId],
     enabled: !!invoice?.workshopId
   });
 
   // Fetch batch details using a single query
-  const { data: batchDetails } = useQuery({
+  const { data: batchDetails } = useQuery<Batch[]>({
     queryKey: ['/api/invoice-batch-details', invoiceId],
     queryFn: async () => {
       if (!invoiceBatches?.length) return [];
       
       const results = await Promise.all(
-        invoiceBatches.map(async (ib: any) => {
+        invoiceBatches.map(async (ib) => {
           const batchId = ib.batchId;
           if (isNaN(batchId)) return null;
           
-          const [batchResponse, productsResponse] = await Promise.all([
-            fetch(`/api/batches/${batchId}`),
-            fetch(`/api/batch-products/batch/${batchId}`)
-          ]);
-          
-          if (!batchResponse.ok || !productsResponse.ok) return null;
-          
-          const batch = await batchResponse.json();
-          const products = await productsResponse.json();
-          
-          return { ...batch, products };
+          try {
+            const [batchResponse, productsResponse] = await Promise.all([
+              fetch(`/api/batches/${batchId}`),
+              fetch(`/api/batch-products/batch/${batchId}`)
+            ]);
+            
+            if (!batchResponse.ok || !productsResponse.ok) return null;
+            
+            const batch = await batchResponse.json();
+            const batchProducts = await productsResponse.json();
+            
+            return { ...batch, products: batchProducts };
+          } catch (error) {
+            console.error('Error fetching batch data:', error);
+            return null;
+          }
         })
       );
       
-      return results.filter(Boolean);
+      return results.filter((batch): batch is Batch => batch !== null);
     },
     enabled: !!invoiceBatches?.length
   });
@@ -281,11 +328,11 @@ export default function InvoicePrint() {
             </tr>
           </thead>
           <tbody>
-            {batchesWithProducts.map((batch: any) => {
-              return batch.products.map((batchProduct: any) => {
-                const product = products?.find((p: any) => p.id === batchProduct.productId);
+            {batchesWithProducts.map((batch) => {
+              return batch.products.map((batchProduct) => {
+                const product = products?.find((p) => p.id === batchProduct.productId);
                 const productValue = parseFloat(product?.productionValue || '0');
-                const quantity = parseInt(batchProduct.quantity);
+                const quantity = parseInt(batchProduct.quantity.toString());
                 const lineTotal = productValue * quantity;
 
                 return (
