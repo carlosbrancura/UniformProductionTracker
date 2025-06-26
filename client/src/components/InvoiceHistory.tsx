@@ -1,13 +1,22 @@
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eye, Download, CreditCard, Calendar } from 'lucide-react';
+import { Download, CreditCard, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { formatDate, formatDateTime } from '@/lib/utils';
-import { apiRequest } from '@/lib/queryClient';
-import InvoicePrintView from './print/InvoicePrintView';
-import type { Invoice } from '@shared/schema';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface Invoice {
+  id: number;
+  workshopId: number;
+  invoiceNumber: string;
+  issueDate: string;
+  dueDate: string;
+  totalAmount: string;
+  status: 'pending' | 'paid';
+  notes?: string;
+  paidDate?: string;
+}
 
 interface InvoiceHistoryProps {
   workshopId: number;
@@ -25,7 +34,6 @@ interface InvoiceHistoryProps {
 export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [printingInvoice, setPrintingInvoice] = useState<Invoice | null>(null);
 
   // Fetch invoices for this workshop
   const { data: invoices = [], isLoading } = useQuery({
@@ -98,7 +106,9 @@ export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
   };
 
   const handlePrintInvoice = (invoice: Invoice) => {
-    setPrintingInvoice(invoice);
+    // Open print page in new tab
+    const printUrl = `/invoice-print/${invoice.id}`;
+    window.open(printUrl, '_blank');
   };
 
   if (isLoading) {
@@ -211,13 +221,7 @@ export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
         ))}
       </div>
 
-      {/* Print Invoice Modal */}
-      {printingInvoice && (
-        <InvoicePrintView 
-          invoice={printingInvoice}
-          onClose={() => setPrintingInvoice(null)}
-        />
-      )}
+
     </div>
   );
 }
