@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,6 +41,49 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedBatches, setSelectedBatches] = useState<number[]>([]);
+  const [batchValues, setBatchValues] = useState<Record<number, number>>({});
+
+  // Fetch batch product values for accurate calculations
+  useEffect(() => {
+    const fetchBatchValues = async () => {
+      try {
+        const batchIds = unpaidBatches.map(batch => batch.id);
+        if (batchIds.length === 0) return;
+
+        const response = await fetch('/api/batch-products/multiple', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batchIds })
+        });
+
+        if (response.ok) {
+          const batchProductsData = await response.json();
+          
+          // Fetch products data
+          const productsResponse = await fetch('/api/products');
+          const products = await response.json();
+
+          // Calculate values for each batch
+          const values: Record<number, number> = {};
+          unpaidBatches.forEach(batch => {
+            const batchProducts = batchProductsData.filter((bp: any) => bp.batchId === batch.id);
+            const value = batchProducts.reduce((total: number, bp: any) => {
+              const product = products.find((p: any) => p.id === bp.productId);
+              const productValue = parseFloat(product?.productionValue?.toString() || '0');
+              return total + (bp.quantity * productValue);
+            }, 0);
+            values[batch.id] = value;
+          });
+          
+          setBatchValues(values);
+        }
+      } catch (error) {
+        console.error('Error fetching batch values:', error);
+      }
+    };
+
+    fetchBatchValues();
+  }, [unpaidBatches]);
 
   // Form setup with validation
   const form = useForm<InvoiceFormData>({
@@ -57,10 +100,9 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
   // Create invoice mutation
   const createInvoiceMutation = useMutation({
     mutationFn: async (data: InvoiceFormData) => {
-      // Calculate total amount from selected batches
+      // Calculate total amount from selected batches using real values
       const totalAmount = selectedBatches.reduce((sum, batchId) => {
-        // For now using standard value, should be calculated from batch products
-        return sum + 150; // Will need to fetch actual batch product values
+        return sum + (batchValues[batchId] || 0);
       }, 0);
 
       const invoiceData = {
@@ -211,7 +253,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
                   </span>
                 </div>
                 <span className="text-sm font-medium text-green-600">
-                  R$ {(150).toFixed(2)} {/* Will be calculated from products */}
+                  R$ {(batchValues[batch.id] || 0).toFixed(2)}
                 </span>
               </label>
             </div>
@@ -230,7 +272,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
         <div className="flex justify-between items-center">
           <span className="font-medium">Total da Fatura:</span>
           <span className="text-xl font-bold text-green-600">
-            R$ {(selectedBatches.length * 150).toFixed(2)} {/* Temporary calculation */}
+            R$ {selectedBatches.reduce((sum, batchId) => sum + (batchValues[batchId] || 0), 0).toFixed(2)}
           </span>
         </div>
         <p className="text-sm text-gray-600 mt-1">
