@@ -551,13 +551,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Update invoice data with calculated total
+      // Update invoice data with calculated total and proper date conversion
       const finalInvoiceData = {
-        ...invoiceData,
+        workshopId: invoiceData.workshopId,
+        invoiceNumber: invoiceData.invoiceNumber,
+        dueDate: new Date(invoiceData.dueDate),
         totalAmount: totalAmount.toFixed(2),
+        notes: invoiceData.notes || '',
         issueDate: new Date(),
-        status: 'pending'
+        status: 'pending' as const
       };
+      
+      console.log('Final invoice data before insert:', finalInvoiceData);
       
       // Create the invoice
       const invoice = await storage.createInvoice(finalInvoiceData);

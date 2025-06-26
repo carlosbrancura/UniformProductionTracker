@@ -25,6 +25,7 @@ interface InvoiceFormProps {
   workshop: any;
   unpaidBatches: Batch[];
   onClose: () => void;
+  showPrintPage: (invoice: any) => void;
 }
 
 /**
@@ -32,7 +33,7 @@ interface InvoiceFormProps {
  * 
  * Creates invoices for workshop payments with basic batch selection
  */
-export default function InvoiceForm({ workshop, unpaidBatches, onClose }: InvoiceFormProps) {
+export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrintPage }: InvoiceFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedBatches, setSelectedBatches] = useState<number[]>([]);
@@ -94,6 +95,11 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
       toast({ title: "Fatura gerada com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ['/api/financial'] });
       queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      
+      // Show print page
+      if (showPrintPage) {
+        showPrintPage(data);
+      }
       onClose();
     },
     onError: (error: Error) => {
@@ -119,8 +125,9 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
       return;
     }
     
-    const formData = { ...data, selectedBatches };
-    createInvoiceMutation.mutate(formData);
+    // Force submission with selected batches
+    console.log('Forcing mutation with data:', { ...data, selectedBatches });
+    createInvoiceMutation.mutate({ ...data, selectedBatches });
   };
 
   // Handle batch selection
