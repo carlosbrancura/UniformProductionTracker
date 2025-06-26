@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fatura</title>
+    <style>
+        @media print {
+            body { margin: 0 !important; padding: 0 !important; }
+            * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+            .container { 
+                width: 100% !important; 
+                margin: 0 !important; 
+                padding: 10px !important; 
+                font-size: 9px !important;
+            }
+        }
+        
+        body {
+            margin: 0;
+            padding: 10px;
+            background: white;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            line-height: 1.2;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+        }
+        
+        .company-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .invoice-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        .invoice-number {
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        
+        .section {
+            border: 1px solid #ccc;
+            padding: 6px;
+            border-radius: 2px;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            font-size: 11px;
+            margin-bottom: 4px;
+            color: #333;
+        }
+        
+        .info-row {
+            margin-bottom: 2px;
+            font-size: 9px;
+        }
+        
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            min-width: 45px;
+        }
+        
+        .batches-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 8px;
+        }
+        
+        .batches-table th,
+        .batches-table td {
+            border: 1px solid #ccc;
+            padding: 3px;
+            text-align: left;
+        }
+        
+        .batches-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            font-size: 9px;
+        }
+        
+        .total-section {
+            text-align: right;
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 2px solid #000;
+        }
+        
+        .total-amount {
+            font-size: 13px;
+            font-weight: bold;
+        }
+        
+        .footer {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 7px;
+            color: #666;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 50vh;
+            font-size: 12px;
+        }
+        
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <div class="loading" id="loading">
+            Carregando dados da fatura...
+        </div>
+    </div>
+
+    <script>
+        // Get invoice ID from URL parameter or pathname
+        let invoiceId = null;
+        
+        // Check URL parameter first
+        const urlParams = new URLSearchParams(window.location.search);
+        invoiceId = urlParams.get('id');
+        
+        // If not found in URL params, check pathname
+        if (!invoiceId) {
+            const pathParts = window.location.pathname.split('/');
+            const invoiceIndex = pathParts.indexOf('invoice-print');
+            if (invoiceIndex !== -1 && pathParts[invoiceIndex + 1]) {
+                invoiceId = pathParts[invoiceIndex + 1];
+            }
+        }
+
+        if (!invoiceId) {
+            document.getElementById('container').innerHTML = '<div class="error">ID da fatura não encontrado na URL</div>';
+        } else {
+            loadInvoiceData(invoiceId);
+        }
+
+        async function loadInvoiceData(id) {
+            try {
+                // Fetch invoice data
+                const invoiceResponse = await fetch(`/api/invoices/${id}`);
+                if (!invoiceResponse.ok) throw new Error('Fatura não encontrada');
+                const invoice = await invoiceResponse.json();
+
+                // Fetch workshop data
+                const workshopResponse = await fetch(`/api/workshops/${invoice.workshopId}`);
+                const workshop = workshopResponse.ok ? await workshopResponse.json() : null;
+
+                // Fetch invoice batches
+                const batchesResponse = await fetch(`/api/invoices/${id}/batches`);
+                const invoiceBatches = batchesResponse.ok ? await batchesResponse.json() : [];
+
+                // Fetch products
+                const productsResponse = await fetch('/api/products');
+                const products = productsResponse.ok ? await productsResponse.json() : [];
+
+                // Fetch batch details
+                const batchDetails = [];
+                for (const invoiceBatch of invoiceBatches) {
+                    try {
+                        const batchResponse = await fetch(`/api/batches/${invoiceBatch.batchId}`);
+                        const batchProductsResponse = await fetch(`/api/batch-products/batch/${invoiceBatch.batchId}`);
+                        
+                        if (batchResponse.ok && batchProductsResponse.ok) {
+                            const batch = await batchResponse.json();
+                            const batchProducts = await batchProductsResponse.json();
+                            batchDetails.push({ ...batch, products: batchProducts });
+                        }
+                    } catch (err) {
+                        console.error('Erro ao buscar lote:', err);
+                    }
+                }
+
+                // Render invoice
+                renderInvoice(invoice, workshop, batchDetails, products);
+
+                // Auto-print after data loads
+                setTimeout(() => {
+                    window.print();
+                }, 1000);
+
+            } catch (error) {
+                console.error('Erro ao carregar fatura:', error);
+                document.getElementById('container').innerHTML = 
+                    `<div class="error">Erro ao carregar fatura: ${error.message}</div>`;
+            }
+        }
+
+        function renderInvoice(invoice, workshop, batches, products) {
+            const container = document.getElementById('container');
+            
+            // Helper function to format dates
+            function formatDate(dateStr) {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('pt-BR');
+            }
+
+            // Helper function to get product abbreviation
+            function getProductAbbr(productName) {
+                if (!productName) return 'N/A';
+                const words = productName.split(' ');
+                if (words.length >= 2) {
+                    return words.slice(0, 2).map(word => word.charAt(0).toUpperCase()).join('');
+                }
+                return productName.substring(0, 2).toUpperCase();
+            }
+
+            // Generate batch rows
+            let batchRows = '';
+            batches.forEach(batch => {
+                batch.products.forEach(batchProduct => {
+                    const product = products.find(p => p.id === batchProduct.productId);
+                    const productValue = parseFloat(product?.productionValue || '0');
+                    const quantity = parseInt(batchProduct.quantity || '0');
+                    const lineTotal = productValue * quantity;
+
+                    batchRows += `
+                        <tr>
+                            <td>${batch.code}</td>
+                            <td>${getProductAbbr(product?.name)}</td>
+                            <td>${batchProduct.selectedColor || '-'}</td>
+                            <td>${batchProduct.selectedSize || '-'}</td>
+                            <td>${quantity}</td>
+                            <td>R$ ${productValue.toFixed(2)}</td>
+                            <td>R$ ${lineTotal.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            });
+
+            container.innerHTML = `
+                <!-- Invoice Header -->
+                <div class="header">
+                    <div class="company-name">EMPRESA CONFECÇÕES</div>
+                    <div class="invoice-title">FATURA DE SERVIÇOS</div>
+                    <div class="invoice-number">Fatura Nº: ${invoice.invoiceNumber}</div>
+                </div>
+
+                <!-- Invoice and Workshop Details -->
+                <div class="details">
+                    <div class="section">
+                        <div class="section-title">Dados da Fatura</div>
+                        <div class="info-row">
+                            <span class="label">Emissão:</span>
+                            ${formatDate(invoice.issueDate)}
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Vencto:</span>
+                            ${formatDate(invoice.dueDate)}
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Status:</span>
+                            ${invoice.status === 'paid' ? 'Pago' : 'Pendente'}
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">Oficina</div>
+                        <div class="info-row">
+                            <span class="label">Nome:</span>
+                            ${workshop?.name || 'N/A'}
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Resp:</span>
+                            ${workshop?.manager || 'N/A'}
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Tel:</span>
+                            ${workshop?.phone || 'N/A'}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Batches Table -->
+                <table class="batches-table">
+                    <thead>
+                        <tr>
+                            <th>Lote</th>
+                            <th>Prod</th>
+                            <th>Cor</th>
+                            <th>Tam</th>
+                            <th>Qtd</th>
+                            <th>Unit</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${batchRows}
+                    </tbody>
+                </table>
+
+                <!-- Total Section -->
+                <div class="total-section">
+                    <div class="total-amount">
+                        TOTAL: R$ ${parseFloat(invoice.totalAmount || '0').toFixed(2)}
+                    </div>
+                </div>
+
+                <!-- Status and Notes -->
+                <div class="section" style="margin-top: 12px;">
+                    <div class="section-title">Informações</div>
+                    <div class="info-row">
+                        <span class="label">Status:</span>
+                        ${invoice.status === 'paid' ? 'PAGO' : 'PENDENTE'}
+                    </div>
+                    ${invoice.notes ? `
+                        <div class="info-row">
+                            <span class="label">Obs:</span>
+                            ${invoice.notes}
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Footer -->
+                <div class="footer">
+                    <p>Fatura gerada automaticamente - ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
