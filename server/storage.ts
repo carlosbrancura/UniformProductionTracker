@@ -608,6 +608,19 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+
+  async getBatchProducts(batchId: number): Promise<BatchProduct[]> {
+    try {
+      const products = await db.select()
+        .from(batchProducts)
+        .where(eq(batchProducts.batchId, batchId));
+      
+      return products;
+    } catch (error) {
+      console.error('Error fetching batch products:', error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
