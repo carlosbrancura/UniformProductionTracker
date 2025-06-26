@@ -38,14 +38,13 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
   const queryClient = useQueryClient();
   const [selectedBatches, setSelectedBatches] = useState<number[]>([]);
 
-  // Form setup with validation
-  const form = useForm<InvoiceFormData>({
-    resolver: zodResolver(invoiceFormSchema),
+  // Form setup with validation - remove selectedBatches from schema validation
+  const form = useForm<Omit<InvoiceFormData, 'selectedBatches'>>({
+    resolver: zodResolver(invoiceFormSchema.omit({ selectedBatches: true })),
     defaultValues: {
       invoiceNumber: `INV-${workshop.workshopName.substring(0, 3).toUpperCase()}-${Date.now()}`,
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      notes: '',
-      selectedBatches: []
+      notes: ''
     },
     mode: 'onChange'
   });
@@ -53,6 +52,9 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
   // Create invoice mutation
   const createInvoiceMutation = useMutation({
     mutationFn: async (data: InvoiceFormData) => {
+      console.log('=== MUTATION EXECUTING ===');
+      console.log('Data received:', data);
+      
       const invoiceData = {
         workshopId: workshop.workshopId || workshop.id,
         invoiceNumber: data.invoiceNumber,
@@ -60,8 +62,10 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
         totalAmount: "0.00", // Will be calculated on backend
         notes: data.notes || '',
         status: 'pending',
-        batchIds: selectedBatches
+        batchIds: data.selectedBatches
       };
+
+      console.log('Sending to API:', invoiceData);
 
       const response = await fetch('/api/invoices', {
         method: 'POST',
@@ -72,12 +76,16 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
         body: JSON.stringify(invoiceData)
       });
 
+      console.log('Response status:', response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('API Error:', errorText);
         throw new Error(`Erro ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('API Success:', result);
       return result;
     },
     onSuccess: (data) => {
@@ -102,7 +110,11 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     }
   });
 
-  const onSubmit = (data: InvoiceFormData) => {
+  const onSubmit = (data: Omit<InvoiceFormData, 'selectedBatches'>) => {
+    console.log('=== FORM SUBMIT ===');
+    console.log('Form data:', data);
+    console.log('Selected batches:', selectedBatches);
+    
     if (selectedBatches.length === 0) {
       toast({
         title: "Erro",
@@ -112,11 +124,9 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
       return;
     }
     
-    // Update the form to include selected batches before submission
-    form.setValue('selectedBatches', selectedBatches);
-    
     // Submit with selected batches
     const submissionData = { ...data, selectedBatches };
+    console.log('Submitting:', submissionData);
     createInvoiceMutation.mutate(submissionData);
   };
 
@@ -127,10 +137,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
         ? [...prev, batchId]
         : prev.filter(id => id !== batchId);
       
-      // Update form validation
-      form.setValue('selectedBatches', newSelection);
-      form.trigger('selectedBatches');
-      
+      console.log('Batch selection updated:', newSelection);
       return newSelection;
     });
   };
@@ -258,6 +265,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
             <Button 
               type="submit" 
               disabled={createInvoiceMutation.isPending || selectedBatches.length === 0}
+              onClick={() => console.log('Button clicked! Selected batches:', selectedBatches)}
             >
               {createInvoiceMutation.isPending ? 'Gerando...' : 'Gerar Fatura'}
             </Button>
