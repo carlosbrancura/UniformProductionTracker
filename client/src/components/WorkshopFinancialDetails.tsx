@@ -118,6 +118,7 @@ export default function WorkshopFinancialDetails({
 
   // Handle mark batch as paid
   const handleMarkAsPaid = (batchId: number) => {
+    console.log('Marking batch as paid:', batchId);
     markAsPaidMutation.mutate(batchId);
   };
 
