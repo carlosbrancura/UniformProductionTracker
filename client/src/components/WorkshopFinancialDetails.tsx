@@ -41,15 +41,21 @@ export default function WorkshopFinancialDetails({
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
 
-  // Fetch unpaid batches for this workshop
-  const { data: unpaidBatches = [], isLoading: batchesLoading } = useQuery({
-    queryKey: ['/api/financial/unpaid-batches', workshop.workshopId, startDate.toISOString(), endDate.toISOString()],
+  // Fetch all batches for this workshop in the period
+  const { data: allBatches = [], isLoading: batchesLoading } = useQuery({
+    queryKey: ['/api/batches/workshop', workshop.workshopId, startDate.toISOString(), endDate.toISOString()],
     queryFn: async () => {
-      const response = await fetch(
-        `/api/financial/unpaid-batches/${workshop.workshopId}?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
-      );
-      if (!response.ok) throw new Error('Failed to fetch unpaid batches');
-      return response.json();
+      const response = await fetch(`/api/batches`);
+      if (!response.ok) throw new Error('Failed to fetch batches');
+      const batches = await response.json();
+      
+      // Filter batches by workshop and date range
+      return batches.filter((batch: any) => {
+        const cutDate = new Date(batch.cutDate);
+        return batch.workshopId === workshop.workshopId && 
+               cutDate >= startDate && 
+               cutDate <= endDate;
+      });
     }
   });
 
@@ -64,14 +70,14 @@ export default function WorkshopFinancialDetails({
   
   useEffect(() => {
     const fetchBatchProducts = async () => {
-      if (unpaidBatches.length === 0) {
+      if (allBatches.length === 0) {
         setBatchProductsData([]);
         return;
       }
       
       try {
         setBatchProductsLoading(true);
-        const batchIds = unpaidBatches.map((batch: Batch) => batch.id);
+        const batchIds = allBatches.map((batch: Batch) => batch.id);
         console.log('Fetching batch products for batch IDs:', batchIds);
         
         const response = await fetch('/api/batch-products/multiple', {
@@ -99,7 +105,7 @@ export default function WorkshopFinancialDetails({
     };
 
     fetchBatchProducts();
-  }, [unpaidBatches.length, unpaidBatches.map((b: any) => b.id).join(',')]);
+  }, [allBatches.length, allBatches.map((b: any) => b.id).join(',')]);
 
   // Mark batch as paid mutation
   const markAsPaidMutation = useMutation({
@@ -185,12 +191,7 @@ export default function WorkshopFinancialDetails({
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-3">
-        <Button onClick={handlePrintReport} variant="outline">
-          <Printer className="h-4 w-4 mr-2" />
-          Imprimir Relatório
-        </Button>
-        
+      <div className="flex gap-3">        
         <Dialog open={showInvoiceForm} onOpenChange={setShowInvoiceForm}>
           <DialogTrigger asChild>
             <Button>
@@ -204,7 +205,7 @@ export default function WorkshopFinancialDetails({
             </DialogHeader>
             <InvoiceForm 
               workshop={workshop}
-              unpaidBatches={unpaidBatches}
+              unpaidBatches={allBatches.filter((batch: any) => !batch.paid)}
               onClose={() => setShowInvoiceForm(false)}
               showPrintPage={(invoice) => {
                 console.log('Invoice created, should show print page:', invoice);
@@ -238,7 +239,7 @@ export default function WorkshopFinancialDetails({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600">Total de Lotes</p>
-              <p className="text-2xl font-bold">{unpaidBatches.length}</p>
+              <p className="text-2xl font-bold">{allBatches.length}</p>
             </div>
             <div className="text-center p-4 bg-red-50 rounded-lg">
               <p className="text-sm text-gray-600">Valor Total em Aberto</p>
@@ -260,9 +261,9 @@ export default function WorkshopFinancialDetails({
       {/* Unpaid Batches List */}
       <Card>
         <CardHeader>
-          <CardTitle>Lotes Pendentes de Pagamento</CardTitle>
+          <CardTitle>Lotes</CardTitle>
           <p className="text-sm text-gray-600">
-            Lista detalhada dos lotes enviados para esta oficina com valores em aberto
+            Lista detalhada dos lotes enviados para esta oficina
           </p>
         </CardHeader>
         <CardContent>
@@ -270,13 +271,15 @@ export default function WorkshopFinancialDetails({
             <div className="text-center py-8">
               <p className="text-gray-500">Carregando lotes...</p>
             </div>
-          ) : unpaidBatches.length === 0 ? (
+          ) : allBatches.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">Nenhum lote pendente de pagamento no período</p>
+              <p className="text-gray-500">Nenhum lote no período</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {unpaidBatches.map((batch: Batch) => {
+              {allBatches.map((batch: Batch, index: number) => {
+                // Add pagination break every 15 items
+                const shouldShowBreak = index > 0 && index % 15 === 0;
                 const batchValue = calculateBatchValue(batch);
                 const batchProducts = getBatchProductDetails(batch);
                 
