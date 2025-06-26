@@ -113,10 +113,14 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
   });
 
   const onSubmit = (data: InvoiceFormData) => {
+    console.log('=== INVOICE FORM SUBMIT ===');
     console.log('Form submitted with data:', data);
     console.log('Selected batches at submit:', selectedBatches);
+    console.log('Form errors:', form.formState.errors);
+    console.log('Form is valid:', form.formState.isValid);
     
     if (selectedBatches.length === 0) {
+      console.log('No batches selected, showing error');
       toast({
         title: "Erro",
         description: "Selecione pelo menos um lote para gerar a fatura",
@@ -126,8 +130,9 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     }
     
     // Force submission with selected batches
-    console.log('Forcing mutation with data:', { ...data, selectedBatches });
-    createInvoiceMutation.mutate({ ...data, selectedBatches });
+    const submissionData = { ...data, selectedBatches };
+    console.log('Attempting to create invoice with data:', submissionData);
+    createInvoiceMutation.mutate(submissionData);
   };
 
   // Handle batch selection
@@ -155,6 +160,9 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     <div className="space-y-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="text-xs text-blue-600 p-2 bg-blue-50 rounded">
+            Debug: Workshop ID = {workshop.id}, Selected = {selectedBatches.length}
+          </div>
           {/* Invoice Details */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Detalhes da Fatura</h3>
@@ -265,6 +273,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
             <Button 
               type="submit" 
               disabled={createInvoiceMutation.isPending || selectedBatches.length === 0}
+              onClick={() => console.log('=== BUTTON CLICKED ===', { selectedBatches, formValid: form.formState.isValid })}
             >
               {createInvoiceMutation.isPending ? 'Gerando...' : 'Gerar Fatura'}
             </Button>
