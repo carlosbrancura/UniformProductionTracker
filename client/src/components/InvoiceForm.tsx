@@ -57,7 +57,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
       console.log('Selected batches:', selectedBatches);
       
       const invoiceData = {
-        workshopId: workshop.workshopId,
+        workshopId: workshop.workshopId || workshop.id,
         invoiceNumber: data.invoiceNumber,
         dueDate: data.dueDate,
         totalAmount: "0.00", // Will be calculated on backend
@@ -116,6 +116,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     console.log('=== INVOICE FORM SUBMIT ===');
     console.log('Form submitted with data:', data);
     console.log('Selected batches at submit:', selectedBatches);
+    console.log('Workshop object:', workshop);
     console.log('Form errors:', form.formState.errors);
     console.log('Form is valid:', form.formState.isValid);
     
@@ -161,7 +162,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="text-xs text-blue-600 p-2 bg-blue-50 rounded">
-            Debug: Workshop ID = {workshop.id}, Selected = {selectedBatches.length}
+            Debug: Workshop = {JSON.stringify(workshop)}, Selected = {selectedBatches.length}
           </div>
           {/* Invoice Details */}
           <div className="space-y-4">
