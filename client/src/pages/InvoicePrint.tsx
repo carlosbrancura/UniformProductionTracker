@@ -1,235 +1,330 @@
 import { useParams } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { useEffect } from 'react';
 
-// Print page for invoices - opens in new tab
 export default function InvoicePrint() {
   const { id } = useParams();
-
+  const invoiceId = parseInt(id || '0');
+  
   // Fetch invoice data
-  const { data: invoice, isLoading, error } = useQuery({
-    queryKey: ['/api/invoices', id],
-    enabled: !!id
+  const { data: invoice, isLoading: invoiceLoading } = useQuery({
+    queryKey: ['/api/invoices', invoiceId],
+    enabled: !!invoiceId && !isNaN(invoiceId)
   });
 
   // Fetch invoice batches
-  const { data: invoiceBatches } = useQuery({
-    queryKey: ['/api/invoices', id, 'batches'],
-    enabled: !!id
+  const { data: invoiceBatches, isLoading: batchesLoading } = useQuery({
+    queryKey: ['/api/invoices', invoiceId, 'batches'],
+    enabled: !!invoiceId && !isNaN(invoiceId)
   });
 
-  // Fetch all products
+  // Fetch products
   const { data: products } = useQuery({
     queryKey: ['/api/products']
   });
 
-  // Fetch batch details and products
-  const { data: batchDetails } = useQuery({
-    queryKey: ['/api/batches/details', invoiceBatches],
-    queryFn: async () => {
-      if (!invoiceBatches || invoiceBatches.length === 0) return [];
-      
-      const batchPromises = invoiceBatches.map(async (ib: any) => {
-        const [batchResponse, batchProductsResponse] = await Promise.all([
-          fetch(`/api/batches/${ib.batchId}`),
-          fetch(`/api/batch-products/batch/${ib.batchId}`)
-        ]);
-        
-        const batch = await batchResponse.json();
-        const batchProducts = await batchProductsResponse.json();
-        
-        return { ...batch, batchProducts };
-      });
-      
-      return Promise.all(batchPromises);
-    },
-    enabled: !!invoiceBatches && invoiceBatches.length > 0
-  });
-
-  // Fetch workshop details
+  // Fetch workshop
   const { data: workshop } = useQuery({
     queryKey: ['/api/workshops', invoice?.workshopId],
     enabled: !!invoice?.workshopId
   });
 
+  // Fetch batch details and products for each batch
+  const batchIds = invoiceBatches?.length ? invoiceBatches.map((ib: any) => ib.batchId) : [];
+  
+  const batchQueries = batchIds.map((batchId: number) => 
+    useQuery({
+      queryKey: ['/api/batches', batchId],
+      enabled: batchIds.length > 0 && !isNaN(batchId)
+    })
+  );
+
+  const batchProductQueries = batchIds.map((batchId: number) => 
+    useQuery({
+      queryKey: ['/api/batch-products/batch', batchId],
+      enabled: batchIds.length > 0 && !isNaN(batchId)
+    })
+  );
+
   // Auto-print when page loads
   useEffect(() => {
-    if (invoice && batchDetails && products && workshop) {
-      // Small delay to ensure page is fully loaded
-      setTimeout(() => {
+    if (!invoiceLoading && !batchesLoading && invoice) {
+      const timer = setTimeout(() => {
         window.print();
       }, 1000);
+      return () => clearTimeout(timer);
     }
-  }, [invoice, batchDetails, products, workshop]);
+  }, [invoiceLoading, batchesLoading, invoice]);
 
-  if (isLoading) {
+  if (invoiceLoading || batchesLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Carregando fatura...</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'white' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            width: '40px', 
+            height: '40px', 
+            border: '4px solid #f3f3f3', 
+            borderTop: '4px solid #3498db', 
+            borderRadius: '50%', 
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }}></div>
+          <p>Carregando dados da fatura...</p>
+        </div>
       </div>
     );
   }
 
-  if (error || !invoice) {
+  if (!invoice) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-red-600">Erro ao carregar fatura</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'white' }}>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ color: '#e74c3c' }}>Fatura não encontrada</p>
+        </div>
       </div>
     );
   }
 
-  const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString('pt-BR');
-  };
+  // Combine batch data with products
+  const batchesWithProducts = batchIds.map((batchId: number, index: number) => {
+    const batchData = batchQueries[index]?.data;
+    const batchProducts = batchProductQueries[index]?.data || [];
+    return {
+      ...batchData,
+      products: batchProducts
+    };
+  }).filter(batch => batch && batch.id);
 
-  const formatCurrency = (value: string | number) => {
-    const numValue = typeof value === 'string' ? parseFloat(value) : value;
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(numValue);
+  // Helper function to get product abbreviation
+  const getProductAbbreviation = (productName: string) => {
+    const words = productName.split(' ');
+    if (words.length >= 2) {
+      return words.slice(0, 2).map(word => word.charAt(0).toUpperCase()).join('');
+    }
+    return productName.substring(0, 2).toUpperCase();
   };
 
   return (
-    <div className="min-h-screen bg-white p-8 print:p-0">
+    <>
       <style>{`
-        @media print {
-          body { margin: 0; }
-          .no-print { display: none; }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
-        @page {
-          margin: 1.5cm;
-          size: A4;
+        @media print {
+          body { margin: 0 !important; padding: 0 !important; }
+          * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+          .print-container { 
+            width: 100% !important; 
+            margin: 0 !important; 
+            padding: 15px !important; 
+            font-size: 10px !important;
+            max-width: none !important;
+          }
+          .no-print { display: none !important; }
+        }
+        body {
+          margin: 0;
+          padding: 0;
+          background: white;
+          font-family: Arial, sans-serif;
+        }
+        .print-container {
+          width: 100%;
+          margin: 0;
+          padding: 15px;
+          font-family: Arial, sans-serif;
+          font-size: 11px;
+          line-height: 1.3;
+          background: white;
+          min-height: 100vh;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 2px solid #000;
+          padding-bottom: 10px;
+        }
+        .company-name {
+          font-size: 18px;
+          font-weight: bold;
+          margin-bottom: 4px;
+        }
+        .invoice-title {
+          font-size: 16px;
+          font-weight: bold;
+          margin: 8px 0;
+        }
+        .invoice-details {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 15px;
+          margin-bottom: 15px;
+        }
+        .section {
+          border: 1px solid #ddd;
+          padding: 8px;
+          border-radius: 3px;
+        }
+        .section-title {
+          font-weight: bold;
+          font-size: 12px;
+          margin-bottom: 6px;
+          color: #333;
+        }
+        .info-row {
+          margin-bottom: 3px;
+          font-size: 10px;
+        }
+        .label {
+          font-weight: bold;
+          display: inline-block;
+          min-width: 50px;
+        }
+        .batches-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 15px 0;
+          font-size: 9px;
+        }
+        .batches-table th,
+        .batches-table td {
+          border: 1px solid #ddd;
+          padding: 4px;
+          text-align: left;
+        }
+        .batches-table th {
+          background-color: #f5f5f5;
+          font-weight: bold;
+          font-size: 10px;
+        }
+        .total-section {
+          text-align: right;
+          margin-top: 15px;
+          padding-top: 10px;
+          border-top: 2px solid #000;
+        }
+        .total-amount {
+          font-size: 14px;
+          font-weight: bold;
+        }
+        .footer {
+          margin-top: 20px;
+          text-align: center;
+          font-size: 8px;
+          color: #666;
         }
       `}</style>
 
-      {/* Header */}
-      <div className="border-b-2 border-gray-300 pb-6 mb-8">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">FATURA</h1>
-            <p className="text-lg text-gray-600">#{invoice.invoiceNumber}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-600">Data de Emissão</p>
-            <p className="text-lg font-semibold">{formatDate(invoice.issueDate)}</p>
-            <p className="text-sm text-gray-600 mt-2">Data de Vencimento</p>
-            <p className="text-lg font-semibold">{formatDate(invoice.dueDate)}</p>
-          </div>
+      <div className="print-container">
+        {/* Invoice Header */}
+        <div className="header">
+          <div className="company-name">EMPRESA CONFECÇÕES</div>
+          <div className="invoice-title">FATURA DE SERVIÇOS</div>
+          <div>Fatura Nº: {invoice.invoiceNumber}</div>
         </div>
-      </div>
 
-      {/* Workshop and Company Info */}
-      <div className="grid grid-cols-2 gap-8 mb-8">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">Para:</h3>
-          <div className="text-gray-700">
-            <p className="text-xl font-semibold">{workshop?.name}</p>
-            <p>Responsável: {workshop?.manager}</p>
-            {workshop?.phone && <p>Telefone: {workshop?.phone}</p>}
-            {workshop?.email && <p>Email: {workshop?.email}</p>}
-            {workshop?.address && <p>Endereço: {workshop?.address}</p>}
-          </div>
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">De:</h3>
-          <div className="text-gray-700">
-            <p className="text-xl font-semibold">Sua Empresa</p>
-            <p>Endereço da empresa</p>
-            <p>Telefone da empresa</p>
-            <p>Email da empresa</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Batch Details */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Detalhes dos Lotes</h3>
-        
-        {batchDetails?.map((batch: any) => (
-          <div key={batch.id} className="border border-gray-200 rounded-lg p-6 mb-4">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-xl font-semibold text-gray-900">Lote {batch.code}</h4>
-              <div className="text-right text-sm text-gray-600">
-                <p>Corte: {formatDate(batch.cutDate)}</p>
-                <p>Retorno: {formatDate(batch.expectedReturnDate)}</p>
-              </div>
+        {/* Invoice and Workshop Details */}
+        <div className="invoice-details">
+          <div className="section">
+            <div className="section-title">Dados da Fatura</div>
+            <div className="info-row">
+              <span className="label">Emissão:</span>
+              {format(new Date(invoice.issueDate), 'dd/MM/yyyy', { locale: ptBR })}
             </div>
+            <div className="info-row">
+              <span className="label">Vencto:</span>
+              {format(new Date(invoice.dueDate), 'dd/MM/yyyy', { locale: ptBR })}
+            </div>
+            <div className="info-row">
+              <span className="label">Status:</span>
+              {invoice.status === 'paid' ? 'Pago' : 'Pendente'}
+            </div>
+          </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-300">
-                    <th className="text-left py-2 px-3 font-semibold">Produto</th>
-                    <th className="text-left py-2 px-3 font-semibold">Cor</th>
-                    <th className="text-left py-2 px-3 font-semibold">Tamanho</th>
-                    <th className="text-center py-2 px-3 font-semibold">Qtd</th>
-                    <th className="text-right py-2 px-3 font-semibold">Valor Unit.</th>
-                    <th className="text-right py-2 px-3 font-semibold">Total</th>
+          <div className="section">
+            <div className="section-title">Oficina</div>
+            <div className="info-row">
+              <span className="label">Nome:</span>
+              {workshop?.name || 'N/A'}
+            </div>
+            <div className="info-row">
+              <span className="label">Resp:</span>
+              {workshop?.manager || 'N/A'}
+            </div>
+            <div className="info-row">
+              <span className="label">Tel:</span>
+              {workshop?.phone || 'N/A'}
+            </div>
+          </div>
+        </div>
+
+        {/* Batches Table */}
+        <table className="batches-table">
+          <thead>
+            <tr>
+              <th>Lote</th>
+              <th>Prod</th>
+              <th>Cor</th>
+              <th>Tam</th>
+              <th>Qtd</th>
+              <th>Unit</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {batchesWithProducts.map((batch: any) => {
+              return batch.products.map((batchProduct: any) => {
+                const product = products?.find((p: any) => p.id === batchProduct.productId);
+                const productValue = parseFloat(product?.productionValue || '0');
+                const quantity = parseInt(batchProduct.quantity);
+                const lineTotal = productValue * quantity;
+
+                return (
+                  <tr key={`${batch.id}-${batchProduct.id}`}>
+                    <td>{batch.code}</td>
+                    <td>{getProductAbbreviation(product?.name || 'N/A')}</td>
+                    <td>{batchProduct.selectedColor || '-'}</td>
+                    <td>{batchProduct.selectedSize || '-'}</td>
+                    <td>{quantity}</td>
+                    <td>R$ {productValue.toFixed(2)}</td>
+                    <td>R$ {lineTotal.toFixed(2)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {batch.batchProducts?.map((bp: any) => {
-                    const product = products?.find((p: any) => p.id === bp.productId);
-                    const unitValue = parseFloat(product?.productionValue || '0');
-                    const totalValue = unitValue * bp.quantity;
-                    
-                    return (
-                      <tr key={bp.id} className="border-b border-gray-100">
-                        <td className="py-3 px-3">
-                          {product?.name || 'Produto não encontrado'}
-                        </td>
-                        <td className="py-3 px-3">{bp.selectedColor}</td>
-                        <td className="py-3 px-3">{bp.selectedSize}</td>
-                        <td className="py-3 px-3 text-center">{bp.quantity}</td>
-                        <td className="py-3 px-3 text-right">{formatCurrency(unitValue)}</td>
-                        <td className="py-3 px-3 text-right font-semibold">{formatCurrency(totalValue)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                );
+              });
+            }).flat()}
+          </tbody>
+        </table>
+
+        {/* Total Section */}
+        <div className="total-section">
+          <div className="total-amount">
+            TOTAL: R$ {parseFloat(invoice.totalAmount).toFixed(2)}
+          </div>
+        </div>
+
+        {/* Status and Notes */}
+        <div className="section" style={{ marginTop: '15px' }}>
+          <div className="section-title">Informações</div>
+          <div className="info-row">
+            <span className="label">Status:</span>
+            {invoice.status === 'paid' ? 'PAGO' : 'PENDENTE'}
+          </div>
+          {invoice.notes && (
+            <div className="info-row">
+              <span className="label">Obs:</span>
+              {invoice.notes}
             </div>
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
 
-      {/* Total */}
-      <div className="border-t-2 border-gray-300 pt-4">
-        <div className="flex justify-end">
-          <div className="text-right">
-            <p className="text-2xl font-bold text-gray-900">
-              Total: {formatCurrency(invoice.totalAmount)}
-            </p>
-            <p className="text-sm text-gray-600 mt-1">
-              Status: {invoice.status === 'pending' ? 'Pendente' : 'Pago'}
-            </p>
-          </div>
+        {/* Footer */}
+        <div className="footer">
+          <p>Fatura gerada automaticamente - {format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
         </div>
       </div>
-
-      {/* Notes */}
-      {invoice.notes && (
-        <div className="mt-8 pt-4 border-t border-gray-200">
-          <h4 className="font-semibold text-gray-900 mb-2">Observações:</h4>
-          <p className="text-gray-700">{invoice.notes}</p>
-        </div>
-      )}
-
-      {/* Footer for print */}
-      <div className="mt-12 pt-4 border-t border-gray-200 text-center text-sm text-gray-500">
-        <p>Fatura gerada em {formatDate(new Date())}</p>
-      </div>
-
-      {/* Close button (not printed) */}
-      <div className="no-print fixed top-4 right-4">
-        <button
-          onClick={() => window.close()}
-          className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
-        >
-          Fechar
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
