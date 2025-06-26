@@ -543,66 +543,62 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWorkshopFinancialSummary(startDate: Date, endDate: Date): Promise<any[]> {
-    console.log('Getting financial summary for date range:', startDate, endDate);
-    
     try {
-      // Get all unpaid batches in the date range
-      const unpaidBatches = await db
+      // Get all workshops ordered by ID (registration order)
+      const allWorkshops = await db
         .select()
-        .from(batches)
-        .innerJoin(workshops, eq(batches.workshopId, workshops.id))
-        .where(
-          and(
-            eq(batches.paid, false),
-            isNotNull(batches.workshopId),
-            gte(batches.cutDate, startDate),
-            lte(batches.cutDate, endDate)
-          )
-        );
-
-      // Calculate values for each workshop
-      const workshopSummary: Record<number, { workshopId: number; workshopName: string; batchCount: number; totalUnpaidValue: number }> = {};
+        .from(workshops)
+        .orderBy(workshops.id);
       
-      for (const batch of unpaidBatches) {
-        const workshopId = batch.batches.workshopId!;
-        const workshopName = batch.workshops.name;
-        
-        if (!workshopSummary[workshopId]) {
-          workshopSummary[workshopId] = {
-            workshopId,
-            workshopName,
-            batchCount: 0,
-            totalUnpaidValue: 0
+      const workshopSummary = await Promise.all(
+        allWorkshops.map(async (workshop) => {
+          // Get unpaid batches for this workshop in the date range
+          const unpaidBatches = await this.getUnpaidBatchesByWorkshop(workshop.id, startDate, endDate);
+          
+          // Get paid batches count by checking invoices
+          const paidBatchesResult = await db
+            .select({ count: sql<number>`count(distinct ${batches.id})` })
+            .from(batches)
+            .innerJoin(invoiceBatches, eq(batches.id, invoiceBatches.batchId))
+            .innerJoin(invoices, eq(invoiceBatches.invoiceId, invoices.id))
+            .where(
+              and(
+                eq(batches.workshopId, workshop.id),
+                eq(invoices.status, 'paid'),
+                gte(batches.cutDate, startDate),
+                lte(batches.cutDate, endDate)
+              )
+            );
+          
+          const paidBatchesCount = paidBatchesResult[0]?.count || 0;
+          
+          // Calculate total unpaid value
+          let totalUnpaidValue = 0;
+          for (const batch of unpaidBatches) {
+            const batchProducts = await db
+              .select()
+              .from(batchProducts)
+              .innerJoin(products, eq(batchProducts.productId, products.id))
+              .where(eq(batchProducts.batchId, batch.id));
+            
+            for (const bp of batchProducts) {
+              const productionValue = parseFloat(bp.products.productionValue?.toString() || '0');
+              totalUnpaidValue += bp.batch_products.quantity * productionValue;
+            }
+          }
+          
+          return {
+            workshopId: workshop.id,
+            workshopName: workshop.name,
+            pendingBatchCount: unpaidBatches.length,
+            paidBatchCount: paidBatchesCount,
+            totalUnpaidValue: totalUnpaidValue.toFixed(2)
           };
-        }
-        
-        workshopSummary[workshopId].batchCount++;
-        
-        // Calculate actual batch value from products
-        const batchProductsResult = await db
-          .select()
-          .from(batchProducts)
-          .innerJoin(products, eq(batchProducts.productId, products.id))
-          .where(eq(batchProducts.batchId, batch.batches.id));
-        
-        const batchValue = batchProductsResult.reduce((total, bp) => {
-          const productValue = parseFloat(bp.products.productionValue?.toString() || '0');
-          return total + (bp.batch_products.quantity * productValue);
-        }, 0);
-        
-        workshopSummary[workshopId].totalUnpaidValue += batchValue;
-      }
-
-      // Convert to array format expected by frontend
-      const result = Object.values(workshopSummary).map(workshop => ({
-        workshopId: workshop.workshopId,
-        workshopName: workshop.workshopName,
-        batchCount: workshop.batchCount.toString(),
-        totalUnpaidValue: workshop.totalUnpaidValue.toFixed(2)
-      })).sort((a, b) => a.workshopName.localeCompare(b.workshopName));
-
-      console.log('Financial summary result with real values:', result);
-      return result;
+        })
+      );
+      
+      // Return all workshops (even with 0 values) in registration order
+      return workshopSummary;
     } catch (error) {
       console.error('Error in getWorkshopFinancialSummary:', error);
       return [];

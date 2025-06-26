@@ -8,7 +8,8 @@ import WorkshopFinancialDetails from "@/components/WorkshopFinancialDetails";
 interface FinancialSummary {
   workshopId: number;
   workshopName: string;
-  batchCount: string;
+  pendingBatchCount: number;
+  paidBatchCount: number;
   totalUnpaidValue: string;
 }
 
