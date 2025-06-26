@@ -2,125 +2,100 @@ import { useParams } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useEffect } from 'react';
-
-interface Invoice {
-  id: number;
-  workshopId: number;
-  invoiceNumber: string;
-  issueDate: string;
-  dueDate: string;
-  totalAmount: string;
-  status: 'pending' | 'paid';
-  notes?: string;
-}
-
-interface Workshop {
-  id: number;
-  name: string;
-  manager: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-}
-
-interface Product {
-  id: number;
-  name: string;
-  productionValue: string;
-}
-
-interface BatchProduct {
-  id: number;
-  productId: number;
-  quantity: number;
-  selectedColor: string;
-  selectedSize: string;
-}
-
-interface Batch {
-  id: number;
-  code: string;
-  cutDate: string;
-  expectedReturnDate: string;
-  products: BatchProduct[];
-}
+import { useEffect, useState } from 'react';
 
 export default function InvoicePrint() {
   const { id } = useParams();
-  const invoiceId = parseInt(id || '0');
-  
-  // Fetch invoice data
-  const { data: invoice, isLoading: invoiceLoading } = useQuery<Invoice>({
-    queryKey: ['/api/invoices', invoiceId],
-    enabled: !!invoiceId && !isNaN(invoiceId)
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [invoiceData, setInvoiceData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch invoice batches
-  const { data: invoiceBatches, isLoading: batchesLoading } = useQuery<Array<{batchId: number}>>({
-    queryKey: ['/api/invoices', invoiceId, 'batches'],
-    enabled: !!invoiceId && !isNaN(invoiceId)
-  });
-
-  // Fetch products
-  const { data: products } = useQuery<Product[]>({
-    queryKey: ['/api/products']
-  });
-
-  // Fetch workshop
-  const { data: workshop } = useQuery<Workshop>({
-    queryKey: ['/api/workshops', invoice?.workshopId],
-    enabled: !!invoice?.workshopId
-  });
-
-  // Fetch batch details using a single query
-  const { data: batchDetails } = useQuery<Batch[]>({
-    queryKey: ['/api/invoice-batch-details', invoiceId],
-    queryFn: async () => {
-      if (!invoiceBatches?.length) return [];
-      
-      const results = await Promise.all(
-        invoiceBatches.map(async (ib) => {
-          const batchId = ib.batchId;
-          if (isNaN(batchId)) return null;
-          
-          try {
-            const [batchResponse, productsResponse] = await Promise.all([
-              fetch(`/api/batches/${batchId}`),
-              fetch(`/api/batch-products/batch/${batchId}`)
-            ]);
-            
-            if (!batchResponse.ok || !productsResponse.ok) return null;
-            
-            const batch = await batchResponse.json();
-            const batchProducts = await productsResponse.json();
-            
-            return { ...batch, products: batchProducts };
-          } catch (error) {
-            console.error('Error fetching batch data:', error);
-            return null;
-          }
-        })
-      );
-      
-      return results.filter((batch): batch is Batch => batch !== null);
-    },
-    enabled: !!invoiceBatches?.length
-  });
-
-  // Auto-print when page loads
+  // Fetch all invoice data in one go
   useEffect(() => {
-    if (!invoiceLoading && !batchesLoading && invoice && batchDetails) {
+    const fetchInvoiceData = async () => {
+      if (!id || isNaN(parseInt(id))) {
+        setError('ID da fatura inválido');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        
+        // Fetch invoice
+        const invoiceResponse = await fetch(`/api/invoices/${id}`);
+        if (!invoiceResponse.ok) {
+          throw new Error('Fatura não encontrada');
+        }
+        const invoice = await invoiceResponse.json();
+
+        // Fetch workshop
+        const workshopResponse = await fetch(`/api/workshops/${invoice.workshopId}`);
+        const workshop = workshopResponse.ok ? await workshopResponse.json() : null;
+
+        // Fetch invoice batches
+        const batchesResponse = await fetch(`/api/invoices/${id}/batches`);
+        const invoiceBatches = batchesResponse.ok ? await batchesResponse.json() : [];
+
+        // Fetch products
+        const productsResponse = await fetch('/api/products');
+        const products = productsResponse.ok ? await productsResponse.json() : [];
+
+        // Fetch batch details for each batch
+        const batchDetails = [];
+        for (const invoiceBatch of invoiceBatches) {
+          try {
+            const batchResponse = await fetch(`/api/batches/${invoiceBatch.batchId}`);
+            const batchProductsResponse = await fetch(`/api/batch-products/batch/${invoiceBatch.batchId}`);
+            
+            if (batchResponse.ok && batchProductsResponse.ok) {
+              const batch = await batchResponse.json();
+              const batchProducts = await batchProductsResponse.json();
+              batchDetails.push({ ...batch, products: batchProducts });
+            }
+          } catch (err) {
+            console.error('Erro ao buscar detalhes do lote:', err);
+          }
+        }
+
+        setInvoiceData({
+          invoice,
+          workshop,
+          batches: batchDetails,
+          products
+        });
+
+      } catch (err) {
+        console.error('Erro ao carregar dados da fatura:', err);
+        setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInvoiceData();
+  }, [id]);
+
+  // Auto-print when data is ready
+  useEffect(() => {
+    if (invoiceData && !isLoading) {
       const timer = setTimeout(() => {
         window.print();
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [invoiceLoading, batchesLoading, invoice, batchDetails]);
+  }, [invoiceData, isLoading]);
 
-  if (invoiceLoading || batchesLoading) {
+  if (isLoading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'white' }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh', 
+        backgroundColor: 'white',
+        fontFamily: 'Arial, sans-serif'
+      }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ 
             width: '40px', 
@@ -131,27 +106,36 @@ export default function InvoicePrint() {
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
           }}></div>
-          <p>Carregando dados da fatura...</p>
+          <p>Carregando fatura...</p>
         </div>
       </div>
     );
   }
 
-  if (!invoice) {
+  if (error || !invoiceData) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'white' }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh', 
+        backgroundColor: 'white',
+        fontFamily: 'Arial, sans-serif'
+      }}>
         <div style={{ textAlign: 'center' }}>
-          <p style={{ color: '#e74c3c' }}>Fatura não encontrada</p>
+          <p style={{ color: '#e74c3c', fontSize: '16px' }}>
+            {error || 'Erro ao carregar fatura'}
+          </p>
         </div>
       </div>
     );
   }
 
-  // Use batch details from the single query
-  const batchesWithProducts = batchDetails || [];
+  const { invoice, workshop, batches, products } = invoiceData;
 
   // Helper function to get product abbreviation
   const getProductAbbreviation = (productName: string) => {
+    if (!productName) return 'N/A';
     const words = productName.split(' ');
     if (words.length >= 2) {
       return words.slice(0, 2).map(word => word.charAt(0).toUpperCase()).join('');
@@ -328,17 +312,17 @@ export default function InvoicePrint() {
             </tr>
           </thead>
           <tbody>
-            {batchesWithProducts.map((batch) => {
-              return batch.products.map((batchProduct) => {
-                const product = products?.find((p) => p.id === batchProduct.productId);
+            {batches.map((batch: any) => {
+              return batch.products.map((batchProduct: any) => {
+                const product = products.find((p: any) => p.id === batchProduct.productId);
                 const productValue = parseFloat(product?.productionValue || '0');
-                const quantity = parseInt(batchProduct.quantity.toString());
+                const quantity = parseInt(batchProduct.quantity?.toString() || '0');
                 const lineTotal = productValue * quantity;
 
                 return (
                   <tr key={`${batch.id}-${batchProduct.id}`}>
                     <td>{batch.code}</td>
-                    <td>{getProductAbbreviation(product?.name || 'N/A')}</td>
+                    <td>{getProductAbbreviation(product?.name)}</td>
                     <td>{batchProduct.selectedColor || '-'}</td>
                     <td>{batchProduct.selectedSize || '-'}</td>
                     <td>{quantity}</td>
@@ -354,7 +338,7 @@ export default function InvoicePrint() {
         {/* Total Section */}
         <div className="total-section">
           <div className="total-amount">
-            TOTAL: R$ {parseFloat(invoice.totalAmount).toFixed(2)}
+            TOTAL: R$ {parseFloat(invoice.totalAmount || '0').toFixed(2)}
           </div>
         </div>
 
