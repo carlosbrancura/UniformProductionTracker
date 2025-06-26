@@ -190,15 +190,22 @@
 
                 // Fetch workshop data
                 const workshopResponse = await fetch(`/api/workshops/${invoice.workshopId}`);
+                console.log('Workshop response status:', workshopResponse.status);
                 const workshop = workshopResponse.ok ? await workshopResponse.json() : null;
 
                 // Fetch invoice batches
                 const batchesResponse = await fetch(`/api/invoices/${id}/batches`);
+                console.log('Batches response status:', batchesResponse.status);
                 const invoiceBatches = batchesResponse.ok ? await batchesResponse.json() : [];
 
                 // Fetch products
                 const productsResponse = await fetch('/api/products');
+                console.log('Products response status:', productsResponse.status);
                 const products = productsResponse.ok ? await productsResponse.json() : [];
+                
+                console.log('Workshop:', workshop);
+                console.log('Invoice batches:', invoiceBatches);
+                console.log('Products count:', products.length);
 
                 // Fetch batch details
                 const batchDetails = [];
