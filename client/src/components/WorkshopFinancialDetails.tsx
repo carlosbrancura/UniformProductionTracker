@@ -40,6 +40,7 @@ export default function WorkshopFinancialDetails({
   // State for dialog management
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
+  const [expandedBatches, setExpandedBatches] = useState<Set<number>>(new Set());
 
   // Fetch all batches for this workshop in the period
   const { data: allBatches = [], isLoading: batchesLoading } = useQuery({
@@ -177,17 +178,17 @@ export default function WorkshopFinancialDetails({
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header with back navigation */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar ao Resumo
-        </Button>
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">{workshop.workshopName}</h1>
           <p className="text-gray-600">
             Detalhes financeiros - {formatDate(startDate)} a {formatDate(endDate)}
           </p>
         </div>
+        <Button variant="outline" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar ao Resumo
+        </Button>
       </div>
 
       {/* Action buttons */}
