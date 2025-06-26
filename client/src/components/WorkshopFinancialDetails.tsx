@@ -136,18 +136,18 @@ export default function WorkshopFinancialDetails({
     }
   });
 
-  // Calculate total value for a batch
+  // Calculate total value for a batch based on actual products
   const calculateBatchValue = (batch: Batch) => {
     const batchProducts = batchProductsData.filter((bp: BatchProduct) => bp.batchId === batch.id);
     
     if (batchProducts.length === 0) {
-      // Fallback to estimated value based on workshop financial summary
-      return 150.00; // Default estimated value per batch
+      // Return 0 if no products found - should not use fallback values
+      return 0;
     }
     
     return batchProducts.reduce((total: number, bp: BatchProduct) => {
       const product = (products as any[]).find((p: any) => p.id === bp.productId);
-      const productValue = parseFloat(product?.productionValue?.toString() || '50');
+      const productValue = parseFloat(product?.productionValue?.toString() || '0');
       return total + (bp.quantity * productValue);
     }, 0);
   };

@@ -50,7 +50,8 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
       notes: '',
       selectedBatches: []
-    }
+    },
+    mode: 'onChange' // Enable real-time validation
   });
 
   // Create invoice mutation
@@ -58,10 +59,8 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
     mutationFn: async (data: InvoiceFormData) => {
       // Calculate total amount from selected batches
       const totalAmount = selectedBatches.reduce((sum, batchId) => {
-        const batch = unpaidBatches.find(b => b.id === batchId);
-        // Note: In a real implementation, you'd calculate this from batch products
-        // For now, using a simplified calculation
-        return sum + 100; // Placeholder value
+        // For now using standard value, should be calculated from batch products
+        return sum + 150; // Will need to fetch actual batch product values
       }, 0);
 
       const invoiceData = {
@@ -95,10 +94,18 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
 
   // Handle batch selection
   const handleBatchSelection = (batchId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedBatches(prev => [...prev, batchId]);
-    } else {
-      setSelectedBatches(prev => prev.filter(id => id !== batchId));
+    const newSelection = checked 
+      ? [...selectedBatches, batchId]
+      : selectedBatches.filter(id => id !== batchId);
+    
+    setSelectedBatches(newSelection);
+    
+    // Update form field to trigger validation
+    form.setValue('selectedBatches', newSelection);
+    
+    // Clear validation errors if batches are selected
+    if (newSelection.length > 0) {
+      form.clearErrors('selectedBatches');
     }
   };
 
@@ -114,6 +121,15 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
 
   // Form submission
   const onSubmit = (data: InvoiceFormData) => {
+    // Ensure we have selected batches
+    if (selectedBatches.length === 0) {
+      form.setError('selectedBatches', { 
+        type: 'manual', 
+        message: 'Selecione pelo menos um lote' 
+      });
+      return;
+    }
+    
     createInvoiceMutation.mutate({
       ...data,
       selectedBatches
@@ -195,7 +211,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
                   </span>
                 </div>
                 <span className="text-sm font-medium text-green-600">
-                  R$ 150,00 {/* Standard batch value */}
+                  R$ {(150).toFixed(2)} {/* Will be calculated from products */}
                 </span>
               </label>
             </div>
@@ -214,7 +230,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
         <div className="flex justify-between items-center">
           <span className="font-medium">Total da Fatura:</span>
           <span className="text-xl font-bold text-green-600">
-            R$ {(selectedBatches.length * 100).toFixed(2)} {/* Placeholder calculation */}
+            R$ {(selectedBatches.length * 150).toFixed(2)} {/* Temporary calculation */}
           </span>
         </div>
         <p className="text-sm text-gray-600 mt-1">
@@ -233,6 +249,9 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
         >
           {createInvoiceMutation.isPending ? 'Gerando...' : 'Gerar Fatura'}
         </Button>
+        {selectedBatches.length === 0 && (
+          <p className="text-sm text-red-600">Selecione pelo menos um lote</p>
+        )}
       </div>
     </form>
   );
