@@ -119,7 +119,11 @@ export default function InvoicePrint() {
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
           }}></div>
-          <p>Carregando fatura...</p>
+          <p>Carregando fatura... (Invoice ID: {invoiceId})</p>
+          <p>Debug: Invoice Loading: {invoiceLoading ? 'Sim' : 'Não'}</p>
+          <p>Debug: Batch Loading: {batchLoading ? 'Sim' : 'Não'}</p>
+          <p>Debug: Invoice Data: {invoice ? 'Disponível' : 'Indisponível'}</p>
+          <p>Debug: Batches Data: {invoiceBatches ? `${invoiceBatches.length} batches` : 'Indisponível'}</p>
         </div>
       </div>
     );
@@ -137,14 +141,26 @@ export default function InvoicePrint() {
       }}>
         <div style={{ textAlign: 'center' }}>
           <p style={{ color: '#e74c3c', fontSize: '16px' }}>
-            Fatura não encontrada
+            Fatura não encontrada (ID: {invoiceId})
           </p>
+          <p>Debug: Invoice Loading: {invoiceLoading ? 'Sim' : 'Não'}</p>
+          <p>Debug: Invoice ID válido: {invoiceId && !isNaN(invoiceId) ? 'Sim' : 'Não'}</p>
         </div>
       </div>
     );
   }
 
   const batches = batchDetails || [];
+
+  // Debug logging
+  console.log('InvoicePrint Debug Info:');
+  console.log('- Invoice ID from URL:', invoiceId);
+  console.log('- Invoice data:', invoice);
+  console.log('- Workshop data:', workshop);
+  console.log('- Invoice batches:', invoiceBatches);
+  console.log('- Products:', products);
+  console.log('- Batch details:', batchDetails);
+  console.log('- Final batches for render:', batches);
 
   // Helper function to get product abbreviation
   const getProductAbbreviation = (productName: string) => {
