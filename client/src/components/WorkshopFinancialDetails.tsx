@@ -240,8 +240,9 @@ export default function WorkshopFinancialDetails({
             <div className="text-center p-4 bg-red-50 rounded-lg">
               <p className="text-sm text-gray-600">Valor Total em Aberto</p>
               <p className="text-2xl font-bold text-red-600">
-                R$ {parseFloat(workshop.totalUnpaidValue || 0).toFixed(2)}
+                R$ {parseFloat(workshop.totalUnpaidValue || '0').toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
+              <p className="text-xs text-gray-500 mt-1">Baseado em produtos reais</p>
             </div>
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-gray-600">Período</p>

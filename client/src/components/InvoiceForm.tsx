@@ -61,7 +61,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
           
           // Fetch products data
           const productsResponse = await fetch('/api/products');
-          const products = await response.json();
+          const products = await productsResponse.json();
 
           // Calculate values for each batch
           const values: Record<number, number> = {};

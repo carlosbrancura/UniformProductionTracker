@@ -542,30 +542,68 @@ export class DatabaseStorage implements IStorage {
   async getWorkshopFinancialSummary(startDate: Date, endDate: Date): Promise<any[]> {
     console.log('Getting financial summary for date range:', startDate, endDate);
     
-    // Get all workshops with unpaid batches - simplified approach
-    const result = await db
-      .select({
-        workshopId: batches.workshopId,
-        workshopName: workshops.name,
-        batchCount: sql<number>`count(distinct ${batches.id})`,
-        // Use a simple fixed value for now to get data showing
-        totalUnpaidValue: sql<number>`count(distinct ${batches.id}) * 150.00`
-      })
-      .from(batches)
-      .innerJoin(workshops, eq(batches.workshopId, workshops.id))
-      .where(
-        and(
-          eq(batches.paid, false),
-          isNotNull(batches.workshopId),
-          gte(batches.cutDate, startDate),
-          lte(batches.cutDate, endDate)
-        )
-      )
-      .groupBy(batches.workshopId, workshops.name)
-      .orderBy(workshops.name);
+    try {
+      // Get all unpaid batches in the date range
+      const unpaidBatches = await db
+        .select()
+        .from(batches)
+        .innerJoin(workshops, eq(batches.workshopId, workshops.id))
+        .where(
+          and(
+            eq(batches.paid, false),
+            isNotNull(batches.workshopId),
+            gte(batches.cutDate, startDate),
+            lte(batches.cutDate, endDate)
+          )
+        );
 
-    console.log('Financial summary result:', result);
-    return result;
+      // Calculate values for each workshop
+      const workshopSummary: Record<number, { workshopId: number; workshopName: string; batchCount: number; totalUnpaidValue: number }> = {};
+      
+      for (const batch of unpaidBatches) {
+        const workshopId = batch.batches.workshopId!;
+        const workshopName = batch.workshops.name;
+        
+        if (!workshopSummary[workshopId]) {
+          workshopSummary[workshopId] = {
+            workshopId,
+            workshopName,
+            batchCount: 0,
+            totalUnpaidValue: 0
+          };
+        }
+        
+        workshopSummary[workshopId].batchCount++;
+        
+        // Calculate actual batch value from products
+        const batchProductsResult = await db
+          .select()
+          .from(batchProducts)
+          .innerJoin(products, eq(batchProducts.productId, products.id))
+          .where(eq(batchProducts.batchId, batch.batches.id));
+        
+        const batchValue = batchProductsResult.reduce((total, bp) => {
+          const productValue = parseFloat(bp.products.productionValue?.toString() || '0');
+          return total + (bp.batch_products.quantity * productValue);
+        }, 0);
+        
+        workshopSummary[workshopId].totalUnpaidValue += batchValue;
+      }
+
+      // Convert to array format expected by frontend
+      const result = Object.values(workshopSummary).map(workshop => ({
+        workshopId: workshop.workshopId,
+        workshopName: workshop.workshopName,
+        batchCount: workshop.batchCount.toString(),
+        totalUnpaidValue: workshop.totalUnpaidValue.toFixed(2)
+      })).sort((a, b) => a.workshopName.localeCompare(b.workshopName));
+
+      console.log('Financial summary result with real values:', result);
+      return result;
+    } catch (error) {
+      console.error('Error in getWorkshopFinancialSummary:', error);
+      return [];
+    }
   }
 }
 
