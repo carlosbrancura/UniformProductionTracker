@@ -30,7 +30,7 @@ function Router() {
           <Route path="/workshops" component={Workshops} />
           <Route path="/users" component={Users} />
           <Route path="/financial" component={Financial} />
-          <Route path="/invoice-print/:id" component={InvoicePrint} />
+  
           <Route>
             <div className="text-center py-12">
               <h1 className="text-2xl font-bold text-slate-900">Página não encontrada</h1>
