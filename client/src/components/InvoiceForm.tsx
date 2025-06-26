@@ -52,9 +52,6 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
   // Create invoice mutation
   const createInvoiceMutation = useMutation({
     mutationFn: async (data: InvoiceFormData) => {
-      console.log('=== MUTATION EXECUTING ===');
-      console.log('Data received:', data);
-      
       const invoiceData = {
         workshopId: workshop.workshopId || workshop.id,
         invoiceNumber: data.invoiceNumber,
@@ -65,8 +62,6 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
         batchIds: data.selectedBatches
       };
 
-      console.log('Sending to API:', invoiceData);
-
       const response = await fetch('/api/invoices', {
         method: 'POST',
         headers: { 
@@ -76,16 +71,12 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
         body: JSON.stringify(invoiceData)
       });
 
-      console.log('Response status:', response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API Error:', errorText);
         throw new Error(`Erro ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('API Success:', result);
       return result;
     },
     onSuccess: (data) => {
@@ -101,7 +92,6 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
       onClose();
     },
     onError: (error: Error) => {
-      console.error('Invoice creation error:', error);
       toast({ 
         title: "Erro ao gerar fatura", 
         description: error.message,
@@ -111,10 +101,6 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
   });
 
   const onSubmit = (data: Omit<InvoiceFormData, 'selectedBatches'>) => {
-    console.log('=== FORM SUBMIT ===');
-    console.log('Form data:', data);
-    console.log('Selected batches:', selectedBatches);
-    
     if (selectedBatches.length === 0) {
       toast({
         title: "Erro",
@@ -126,7 +112,6 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     
     // Submit with selected batches
     const submissionData = { ...data, selectedBatches };
-    console.log('Submitting:', submissionData);
     createInvoiceMutation.mutate(submissionData);
   };
 
@@ -137,7 +122,6 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
         ? [...prev, batchId]
         : prev.filter(id => id !== batchId);
       
-      console.log('Batch selection updated:', newSelection);
       return newSelection;
     });
   };
@@ -265,7 +249,6 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
             <Button 
               type="submit" 
               disabled={createInvoiceMutation.isPending || selectedBatches.length === 0}
-              onClick={() => console.log('Button clicked! Selected batches:', selectedBatches)}
             >
               {createInvoiceMutation.isPending ? 'Gerando...' : 'Gerar Fatura'}
             </Button>
