@@ -172,16 +172,16 @@ export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-3">
               <div>
                 <span className="font-medium">Emissão:</span><br />
-                {formatDate(invoice.issueDate)}
+                {format(new Date(invoice.issueDate), 'dd/MM/yyyy', { locale: ptBR })}
               </div>
               <div>
                 <span className="font-medium">Vencimento:</span><br />
-                {formatDate(invoice.dueDate)}
+                {format(new Date(invoice.dueDate), 'dd/MM/yyyy', { locale: ptBR })}
               </div>
               {invoice.paidDate && (
                 <div>
                   <span className="font-medium">Pagamento:</span><br />
-                  {formatDate(invoice.paidDate)}
+                  {format(new Date(invoice.paidDate), 'dd/MM/yyyy', { locale: ptBR })}
                 </div>
               )}
               <div>
