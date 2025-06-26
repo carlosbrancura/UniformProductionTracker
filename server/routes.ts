@@ -657,6 +657,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded images
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+  // GET /api/invoices/:id/batches - Get batches for a specific invoice
+  app.get('/api/invoices/:id/batches', async (req, res) => {
+    try {
+      const invoiceId = parseInt(req.params.id);
+      const invoiceBatches = await storage.getInvoiceBatches(invoiceId);
+      res.json(invoiceBatches);
+    } catch (error) {
+      console.error('Error fetching invoice batches:', error);
+      res.status(500).json({ error: 'Failed to fetch invoice batches' });
+    }
+  });
+
+  // GET /api/batch-products/batch/:batchId - Get products for a specific batch
+  app.get('/api/batch-products/batch/:batchId', async (req, res) => {
+    try {
+      const batchId = parseInt(req.params.batchId);
+      const batchProducts = await storage.getBatchProducts(batchId);
+      res.json(batchProducts);
+    } catch (error) {
+      console.error('Error fetching batch products:', error);
+      res.status(500).json({ error: 'Failed to fetch batch products' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, Download, CreditCard, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import { apiRequest } from '@/lib/queryClient';
+import InvoicePrintView from './print/InvoicePrintView';
 import type { Invoice } from '@shared/schema';
 
 interface InvoiceHistoryProps {
@@ -38,9 +40,17 @@ export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
   // Mark invoice as paid mutation
   const markInvoiceAsPaidMutation = useMutation({
     mutationFn: async (invoiceId: number) => {
-      return apiRequest(`/api/invoices/${invoiceId}/pay`, {
-        method: 'PATCH'
+      const response = await fetch(`/api/invoices/${invoiceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'paid', paidDate: new Date().toISOString() })
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update invoice status');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({ title: "Fatura marcada como paga com sucesso!" });
@@ -87,10 +97,8 @@ export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
     markInvoiceAsPaidMutation.mutate(invoiceId);
   };
 
-  // Handle print/download invoice
   const handlePrintInvoice = (invoice: Invoice) => {
-    // In a real implementation, this would generate a PDF or open a print view
-    toast({ title: `Imprimindo fatura ${invoice.invoiceNumber}` });
+    setPrintingInvoice(invoice);
   };
 
   if (isLoading) {
@@ -185,7 +193,7 @@ export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
                 onClick={() => handlePrintInvoice(invoice)}
               >
                 <Download className="h-4 w-4 mr-1" />
-                Baixar
+                Imprimir
               </Button>
               
               {invoice.status === 'pending' && (
