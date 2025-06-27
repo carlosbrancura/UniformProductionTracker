@@ -104,11 +104,22 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     }, 0);
   };
 
+  // Generate invoice number: [3 letters workshop] - [ddmmyy] - [sequential 4 digits starting 1000]
+  const generateInvoiceNumber = () => {
+    const workshopCode = workshop.workshopName.substring(0, 3).toUpperCase();
+    const today = new Date();
+    const dateCode = String(today.getDate()).padStart(2, '0') + 
+                    String(today.getMonth() + 1).padStart(2, '0') + 
+                    String(today.getFullYear()).slice(-2);
+    const sequentialNumber = Math.floor(Math.random() * 9000) + 1000; // Temporary - should be from database
+    return `${workshopCode}-${dateCode}-${sequentialNumber}`;
+  };
+
   // Form setup with validation - remove selectedBatches from schema validation
   const form = useForm<Omit<InvoiceFormData, 'selectedBatches'>>({
     resolver: zodResolver(invoiceFormSchema.omit({ selectedBatches: true })),
     defaultValues: {
-      invoiceNumber: `INV-${workshop.workshopName.substring(0, 3).toUpperCase()}-${Date.now()}`,
+      invoiceNumber: generateInvoiceNumber(),
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       notes: ''
     },
@@ -128,6 +139,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
         batchIds: data.selectedBatches
       };
 
+      // Create the invoice
       const response = await fetch('/api/invoices', {
         method: 'POST',
         headers: { 
@@ -143,13 +155,34 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
       }
 
       const result = await response.json();
+
+      // Mark all batches in this invoice as paid
+      for (const batchId of data.selectedBatches) {
+        try {
+          const batchResponse = await fetch(`/api/batches/${batchId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ paid: true })
+          });
+          
+          if (!batchResponse.ok) {
+            console.error(`Failed to mark batch ${batchId} as paid`);
+          }
+        } catch (error) {
+          console.error(`Error marking batch ${batchId} as paid:`, error);
+        }
+      }
+
       return result;
     },
     onSuccess: (data) => {
       console.log('Invoice mutation successful:', data);
-      toast({ title: "Fatura gerada com sucesso!" });
+      toast({ title: "Fatura gerada com sucesso e lotes marcados como pagos!" });
       queryClient.invalidateQueries({ queryKey: ['/api/financial'] });
       queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/batches'] });
       
       // Show print page
       if (showPrintPage) {
