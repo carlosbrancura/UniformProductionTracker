@@ -46,20 +46,27 @@ export default function WorkshopFinancialDetails({
   const { data: allBatches = [], isLoading: batchesLoading } = useQuery({
     queryKey: ['/api/batches/workshop', workshop.workshopId, startDate.toISOString(), endDate.toISOString()],
     queryFn: async () => {
-      const response = await fetch(`/api/batches`);
+      console.log('Fetching batches for workshop:', workshop.workshopId);
+      const response = await fetch(`/api/batches?_t=${Date.now()}`); // Cache busting
       if (!response.ok) throw new Error('Failed to fetch batches');
       const batches = await response.json();
       
+      console.log('All batches from API:', batches);
+      
       // Filter batches by workshop and date range
-      return batches.filter((batch: any) => {
+      const filteredBatches = batches.filter((batch: any) => {
         const cutDate = new Date(batch.cutDate);
-        return batch.workshopId === workshop.workshopId && 
-               cutDate >= startDate && 
-               cutDate <= endDate;
+        const matchesWorkshop = batch.workshopId === workshop.workshopId;
+        const inDateRange = cutDate >= startDate && cutDate <= endDate;
+        return matchesWorkshop && inDateRange;
       });
+      
+      console.log('Filtered batches for workshop', workshop.workshopId, ':', filteredBatches);
+      return filteredBatches;
     },
     refetchOnWindowFocus: true,
-    staleTime: 0 // Always refetch to get latest data
+    staleTime: 0, // Always refetch to get latest data
+    refetchInterval: 5000 // Refetch every 5 seconds
   });
 
   // Fetch all products for reference
@@ -307,6 +314,9 @@ export default function WorkshopFinancialDetails({
                           {batch.paid ? 'Faturado' : 'Aberto'}
                         </Badge>
                         <span className="text-sm text-gray-600">Data de Corte: {formatDate(batch.cutDate)}</span>
+                        <span className="text-xs text-gray-400">
+                          (DB: {batch.paid ? 'paid=true' : 'paid=false'})
+                        </span>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
