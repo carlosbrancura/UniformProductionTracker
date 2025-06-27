@@ -118,7 +118,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
   const form = useForm<Omit<InvoiceFormData, 'selectedBatches'>>({
     resolver: zodResolver(invoiceFormSchema.omit({ selectedBatches: true })),
     defaultValues: {
-      invoiceNumber: generateInvoiceNumber(),
+      invoiceNumber: "Gerado automaticamente",
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       notes: ''
     },
@@ -130,7 +130,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     mutationFn: async (data: InvoiceFormData) => {
       const invoiceData = {
         workshopId: workshop.workshopId || workshop.id,
-        invoiceNumber: data.invoiceNumber,
+        invoiceNumber: "AUTO_GENERATE", // Server will generate proper number
         dueDate: data.dueDate,
         totalAmount: "0.00", // Will be calculated on backend
         notes: data.notes || '',
@@ -233,7 +233,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
                   <FormItem>
                     <FormLabel>Número da Fatura</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="INV-001" />
+                      <Input {...field} placeholder="Gerado automaticamente" disabled />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
