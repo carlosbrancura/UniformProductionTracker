@@ -238,15 +238,15 @@ export default function Financial() {
                             <span className="font-bold text-green-600">{workshop.paidBatchCount}</span>
                             <span className="text-gray-600">pagos</span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <span className="font-bold text-orange-600">
-                              R$ {unpaidValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </span>
-                            <span className="text-gray-600">pendente</span>
-                          </div>
                         </div>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400 ml-4" />
+                      <div className="text-right mr-4">
+                        <div className="text-xl font-bold text-orange-600">
+                          R$ {unpaidValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-sm text-gray-500">Pendente</div>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
                     </div>
                   </div>
                 );
