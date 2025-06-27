@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Printer, CreditCard, Calendar, Package } from 'lucide-react';
+import { ArrowLeft, Printer, CreditCard, Calendar, Package, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -175,6 +175,17 @@ export default function WorkshopFinancialDetails({
     markAsPaidMutation.mutate(batchId);
   };
 
+  // Toggle batch expansion
+  const toggleBatchExpansion = (batchId: number) => {
+    const newExpanded = new Set(expandedBatches);
+    if (newExpanded.has(batchId)) {
+      newExpanded.delete(batchId);
+    } else {
+      newExpanded.add(batchId);
+    }
+    setExpandedBatches(newExpanded);
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header with back navigation */}
@@ -294,12 +305,26 @@ export default function WorkshopFinancialDetails({
                           {batch.status === 'returned' ? 'Retornado' : 'Em Produção'}
                         </Badge>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-green-600">
-                          R$ {batchValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                        <p className="text-xs text-gray-500">Valor do lote</p>
-                        <p className="text-xs text-blue-600 mt-1">Pagamento via fatura</p>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-green-600">
+                            R$ {batchValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-gray-500">Valor do lote</p>
+                          <p className="text-xs text-blue-600 mt-1">Pagamento via fatura</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleBatchExpansion(batch.id)}
+                          className="p-2"
+                        >
+                          {expandedBatches.has(batch.id) ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
                     </div>
 
@@ -318,36 +343,44 @@ export default function WorkshopFinancialDetails({
                       )}
                     </div>
 
-                    {/* Product details */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                        <Package className="h-4 w-4" />
-                        Produtos do Lote
-                      </h4>
-                      <div className="grid gap-2">
-                        {batchProducts.map((bp: BatchProduct) => {
-                          const product = products.find((p: Product) => p.id === bp.productId);
-                          const itemValue = bp.quantity * (product?.productionValue || 0);
-                          
-                          return (
-                            <div key={bp.id} className="flex items-center justify-between bg-gray-50 p-3 rounded">
-                              <div className="flex-1">
-                                <p className="font-medium">{product?.name || 'Produto não encontrado'}</p>
-                                <div className="flex gap-4 text-sm text-gray-600">
-                                  <span>Cor: {bp.selectedColor}</span>
-                                  <span>Tamanho: {bp.selectedSize}</span>
-                                  <span>Quantidade: {bp.quantity}</span>
+                    {/* Product details with expand/collapse animation */}
+                    <div 
+                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        expandedBatches.has(batch.id) 
+                          ? 'max-h-96 opacity-100' 
+                          : 'max-h-0 opacity-0'
+                      }`}
+                    >
+                      <div className="space-y-2 pt-4">
+                        <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          Produtos do Lote
+                        </h4>
+                        <div className="grid gap-2">
+                          {batchProducts.map((bp: BatchProduct) => {
+                            const product = products.find((p: Product) => p.id === bp.productId);
+                            const itemValue = bp.quantity * (product?.productionValue || 0);
+                            
+                            return (
+                              <div key={bp.id} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                                <div className="flex-1">
+                                  <p className="font-medium">{product?.name || 'Produto não encontrado'}</p>
+                                  <div className="flex gap-4 text-sm text-gray-600">
+                                    <span>Cor: {bp.selectedColor}</span>
+                                    <span>Tamanho: {bp.selectedSize}</span>
+                                    <span>Quantidade: {bp.quantity}</span>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-medium">R$ {itemValue.toFixed(2)}</p>
+                                  <p className="text-xs text-gray-500">
+                                    R$ {product?.productionValue || 0} × {bp.quantity}
+                                  </p>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="font-medium">R$ {itemValue.toFixed(2)}</p>
-                                <p className="text-xs text-gray-500">
-                                  R$ {product?.productionValue || 0} × {bp.quantity}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
