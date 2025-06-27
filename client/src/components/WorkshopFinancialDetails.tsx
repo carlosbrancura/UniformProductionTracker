@@ -302,7 +302,7 @@ export default function WorkshopFinancialDetails({
                       <div className="flex items-center gap-3">
                         <h3 className="font-semibold text-lg">Lote {batch.code}</h3>
                         <Badge variant={batch.paid ? 'default' : 'destructive'}>
-                          {batch.paid ? 'Pago' : 'Não Pago'}
+                          {batch.paid ? 'Faturado' : 'Aberto'}
                         </Badge>
                         <span className="text-sm text-gray-600">Data de Corte: {formatDate(batch.cutDate)}</span>
                       </div>
