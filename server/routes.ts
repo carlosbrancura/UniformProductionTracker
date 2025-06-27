@@ -530,6 +530,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Creating invoice with data:', req.body);
       const { batchIds, ...invoiceData } = req.body;
       
+      // Get workshop info for proper invoice numbering
+      const workshop = await storage.getWorkshop(invoiceData.workshopId);
+      if (!workshop) {
+        return res.status(404).json({ error: 'Workshop not found' });
+      }
+
+      // Generate proper invoice number: [3 letters] - [ddmmyy] - [sequential 4 digits]
+      const workshopCode = workshop.name.substring(0, 3).toUpperCase();
+      const today = new Date();
+      const dateCode = String(today.getDate()).padStart(2, '0') + 
+                      String(today.getMonth() + 1).padStart(2, '0') + 
+                      String(today.getFullYear()).slice(-2);
+      
+      // Get next sequential number (starting from 1000)
+      const existingInvoices = await storage.getAllInvoices();
+      const todayInvoices = existingInvoices.filter(inv => {
+        const invDate = new Date(inv.issueDate);
+        return invDate.toDateString() === today.toDateString() && 
+               inv.invoiceNumber.startsWith(`${workshopCode}-${dateCode}-`);
+      });
+      
+      const nextSequential = 1000 + todayInvoices.length;
+      const generatedInvoiceNumber = `${workshopCode}-${dateCode}-${nextSequential}`;
+      
       // Calculate total amount from batches
       let totalAmount = 0;
       if (batchIds && batchIds.length > 0) {
@@ -554,7 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create invoice using direct SQL to avoid date conversion issues
       console.log('Attempting to insert invoice with:', {
         workshopId: invoiceData.workshopId,
-        invoiceNumber: invoiceData.invoiceNumber,
+        invoiceNumber: generatedInvoiceNumber,
         dueDate: invoiceData.dueDate,
         totalAmount: totalAmount.toFixed(2),
         notes: invoiceData.notes || ''
@@ -566,7 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         RETURNING *
       `, [
         invoiceData.workshopId,
-        invoiceData.invoiceNumber,
+        generatedInvoiceNumber,
         invoiceData.dueDate,
         totalAmount.toFixed(2),
         invoiceData.notes || '',

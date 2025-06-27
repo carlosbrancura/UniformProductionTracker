@@ -104,15 +104,14 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     }, 0);
   };
 
-  // Generate invoice number: [3 letters workshop] - [ddmmyy] - [sequential 4 digits starting 1000]
+  // Generate temporary invoice number (server will generate the real one)
   const generateInvoiceNumber = () => {
     const workshopCode = workshop.workshopName.substring(0, 3).toUpperCase();
     const today = new Date();
     const dateCode = String(today.getDate()).padStart(2, '0') + 
                     String(today.getMonth() + 1).padStart(2, '0') + 
                     String(today.getFullYear()).slice(-2);
-    const sequentialNumber = Math.floor(Math.random() * 9000) + 1000; // Temporary - should be from database
-    return `${workshopCode}-${dateCode}-${sequentialNumber}`;
+    return `${workshopCode}-${dateCode}-XXXX`;
   };
 
   // Form setup with validation - remove selectedBatches from schema validation
@@ -156,30 +155,13 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
 
       const result = await response.json();
 
-      // Mark all batches in this invoice as paid
-      for (const batchId of data.selectedBatches) {
-        try {
-          const batchResponse = await fetch(`/api/batches/${batchId}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ paid: true })
-          });
-          
-          if (!batchResponse.ok) {
-            console.error(`Failed to mark batch ${batchId} as paid`);
-          }
-        } catch (error) {
-          console.error(`Error marking batch ${batchId} as paid:`, error);
-        }
-      }
+      // Server automatically marks batches as paid during invoice creation
 
       return result;
     },
     onSuccess: (data) => {
       console.log('Invoice mutation successful:', data);
-      toast({ title: "Fatura gerada com sucesso e lotes marcados como pagos!" });
+      toast({ title: "Fatura gerada com sucesso e lotes marcados como faturados!" });
       queryClient.invalidateQueries({ queryKey: ['/api/financial'] });
       queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
       queryClient.invalidateQueries({ queryKey: ['/api/batches'] });
