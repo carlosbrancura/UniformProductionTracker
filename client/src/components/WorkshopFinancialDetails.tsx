@@ -301,8 +301,9 @@ export default function WorkshopFinancialDetails({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <h3 className="font-semibold text-lg">Lote {batch.code}</h3>
-                        <Badge variant={batch.status === 'returned' ? 'default' : 'secondary'}>
-                          {batch.status === 'returned' ? 'Retornado' : 'Em Produção'}
+                        <span className="text-sm text-gray-600">Data de Corte: {formatDate(batch.cutDate)}</span>
+                        <Badge variant={batch.paid ? 'default' : 'destructive'}>
+                          {batch.paid ? 'Pago' : 'Não Pago'}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-4">
@@ -311,7 +312,6 @@ export default function WorkshopFinancialDetails({
                             R$ {batchValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
                           <p className="text-xs text-gray-500">Valor do lote</p>
-                          <p className="text-xs text-blue-600 mt-1">Pagamento via fatura</p>
                         </div>
                         <Button
                           variant="ghost"
@@ -328,20 +328,12 @@ export default function WorkshopFinancialDetails({
                       </div>
                     </div>
 
-                    {/* Batch dates */}
-                    <div className="flex gap-6 text-sm text-gray-600">
-                      <div>
-                        <span className="font-medium">Data de Corte:</span> {formatDate(batch.cutDate)}
+                    {/* Additional return date info if available */}
+                    {batch.actualReturnDate && (
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">Retorno Real:</span> {formatDate(batch.actualReturnDate)}
                       </div>
-                      <div>
-                        <span className="font-medium">Retorno Esperado:</span> {formatDate(batch.expectedReturnDate)}
-                      </div>
-                      {batch.actualReturnDate && (
-                        <div>
-                          <span className="font-medium">Retorno Real:</span> {formatDate(batch.actualReturnDate)}
-                        </div>
-                      )}
-                    </div>
+                    )}
 
                     {/* Product details with expand/collapse animation */}
                     <div 
