@@ -81,10 +81,9 @@ export default function Financial() {
     return sum + value;
   }, 0);
 
-  const totalBatchCount = financialSummary.reduce((sum, workshop) => {
-    const count = parseInt(workshop.batchCount || '0');
-    return sum + count;
-  }, 0);
+  const totalPendingBatches = financialSummary.reduce((sum, workshop) => sum + workshop.pendingBatchCount, 0);
+  const totalPaidBatches = financialSummary.reduce((sum, workshop) => sum + workshop.paidBatchCount, 0);
+  const totalBatches = financialSummary.reduce((sum, workshop) => sum + workshop.totalBatchCount, 0);
 
   const workshopsWithDebt = financialSummary.filter(workshop => 
     parseFloat(workshop.totalUnpaidValue || '0') > 0
@@ -150,37 +149,7 @@ export default function Financial() {
           </CardContent>
         </Card>
 
-        {/* Total Workshops with Pending Payments */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Oficinas Pendentes</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {workshopsWithDebt}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Com valores em aberto
-            </p>
-          </CardContent>
-        </Card>
 
-        {/* Total Unpaid Batches */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lotes Pendentes</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {totalBatchCount}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Aguardando pagamento
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Workshop Financial Summary List */}
