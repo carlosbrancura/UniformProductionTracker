@@ -244,8 +244,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/batches", async (req, res) => {
     try {
       const batches = await storage.getAllBatches();
+      console.log('API returning batches with paid field:', batches.map(b => ({ id: b.id, code: b.code, paid: b.paid })));
       res.json(batches);
     } catch (error) {
+      console.error("Error fetching batches:", error);
       res.status(500).json({ message: "Failed to fetch batches" });
     }
   });

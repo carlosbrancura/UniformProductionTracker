@@ -347,6 +347,7 @@ export class DatabaseStorage implements IStorage {
         conferenceResult: batches.conferenceResult,
         observations: batches.observations,
         imageUrl: batches.imageUrl,
+        paid: batches.paid, // Include the paid field
         productId: batchProducts.productId,
         quantity: batchProducts.quantity,
       })
@@ -362,7 +363,9 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    return Array.from(batchMap.values());
+    const result = Array.from(batchMap.values());
+    console.log('DatabaseStorage.getAllBatches returning with paid field:', result.map(b => ({ id: b.id, code: b.code, paid: b.paid })));
+    return result;
   }
 
   async createBatch(batchData: any): Promise<Batch> {
