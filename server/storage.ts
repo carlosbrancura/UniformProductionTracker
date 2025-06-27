@@ -552,36 +552,32 @@ export class DatabaseStorage implements IStorage {
       
       const workshopSummary = await Promise.all(
         allWorkshops.map(async (workshop) => {
-          // Get unpaid batches for this workshop in the date range
-          const unpaidBatches = await this.getUnpaidBatchesByWorkshop(workshop.id, startDate, endDate);
-          
-          // Get paid batches count by checking invoices
-          const paidBatchesResult = await db
-            .select({ count: sql<number>`count(distinct ${batches.id})` })
+          // Get all batches for this workshop in the date range
+          const allBatches = await db
+            .select()
             .from(batches)
-            .innerJoin(invoiceBatches, eq(batches.id, invoiceBatches.batchId))
-            .innerJoin(invoices, eq(invoiceBatches.invoiceId, invoices.id))
             .where(
               and(
                 eq(batches.workshopId, workshop.id),
-                eq(invoices.status, 'paid'),
                 gte(batches.cutDate, startDate),
                 lte(batches.cutDate, endDate)
               )
             );
           
-          const paidBatchesCount = paidBatchesResult[0]?.count || 0;
+          // Count unpaid and paid batches
+          const unpaidBatches = allBatches.filter(batch => !batch.paid);
+          const paidBatches = allBatches.filter(batch => batch.paid);
           
           // Calculate total unpaid value
           let totalUnpaidValue = 0;
           for (const batch of unpaidBatches) {
-            const batchProducts = await db
+            const batchProductsList = await db
               .select()
               .from(batchProducts)
               .innerJoin(products, eq(batchProducts.productId, products.id))
               .where(eq(batchProducts.batchId, batch.id));
             
-            for (const bp of batchProducts) {
+            for (const bp of batchProductsList) {
               const productionValue = parseFloat(bp.products.productionValue?.toString() || '0');
               totalUnpaidValue += bp.batch_products.quantity * productionValue;
             }
@@ -591,7 +587,8 @@ export class DatabaseStorage implements IStorage {
             workshopId: workshop.id,
             workshopName: workshop.name,
             pendingBatchCount: unpaidBatches.length,
-            paidBatchCount: paidBatchesCount,
+            paidBatchCount: paidBatches.length,
+            totalBatchCount: allBatches.length,
             totalUnpaidValue: totalUnpaidValue.toFixed(2)
           };
         })

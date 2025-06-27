@@ -10,6 +10,7 @@ interface FinancialSummary {
   workshopName: string;
   pendingBatchCount: number;
   paidBatchCount: number;
+  totalBatchCount: number;
   totalUnpaidValue: string;
 }
 
@@ -83,16 +84,11 @@ export default function Financial() {
 
   const totalPendingBatches = financialSummary.reduce((sum, workshop) => sum + workshop.pendingBatchCount, 0);
   const totalPaidBatches = financialSummary.reduce((sum, workshop) => sum + workshop.paidBatchCount, 0);
-  const totalBatches = financialSummary.reduce((sum, workshop) => sum + workshop.totalBatchCount, 0);
+  const totalBatchCount = financialSummary.reduce((sum, workshop) => sum + workshop.totalBatchCount, 0);
 
   const workshopsWithDebt = financialSummary.filter(workshop => 
     parseFloat(workshop.totalUnpaidValue || '0') > 0
   ).length;
-
-  // Handle workshop selection for detailed view
-  const handleWorkshopClick = (workshop: FinancialSummary) => {
-    setSelectedWorkshop(workshop);
-  };
 
   // Return to main financial view
   const handleBackToSummary = () => {
@@ -132,7 +128,7 @@ export default function Financial() {
       </div>
 
       {/* Financial Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Total Outstanding Amount */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -144,11 +140,58 @@ export default function Financial() {
               R$ {totalUnpaidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground">
-              {totalBatchCount} lotes em {financialSummary.length} oficinas
+              {totalPendingBatches} lotes em {financialSummary.length} oficinas
             </p>
           </CardContent>
         </Card>
 
+        {/* Total Batches */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Lotes</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {totalBatchCount}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              No período selecionado
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Pending Batches */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Lotes Pendentes</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {totalPendingBatches}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Aguardando pagamento
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Paid Batches */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Lotes Pagos</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {totalPaidBatches}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Já foram pagos
+            </p>
+          </CardContent>
+        </Card>
 
       </div>
 
@@ -190,27 +233,36 @@ export default function Financial() {
             <div className="space-y-3">
               {financialSummary.map((workshop) => {
                 const unpaidValue = parseFloat(workshop.totalUnpaidValue || '0');
-                const batchCount = parseInt(workshop.batchCount || '0');
                 
                 return (
                   <div
                     key={workshop.workshopId}
                     className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => handleWorkshopClick(workshop)}
+                    onClick={() => setSelectedWorkshop(workshop)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg">{workshop.workshopName}</h3>
-                        <div className="flex gap-4 text-sm text-gray-600 mt-1">
-                          <span className="font-medium">{batchCount} lotes pendentes</span>
-                          <span>Período: últimos 60 dias</span>
+                        <div className="grid grid-cols-4 gap-4 text-sm mt-2">
+                          <div className="text-center">
+                            <p className="text-gray-600">Total</p>
+                            <p className="font-bold text-blue-600">{workshop.totalBatchCount}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-gray-600">Pendentes</p>
+                            <p className="font-bold text-red-600">{workshop.pendingBatchCount}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-gray-600">Pagos</p>
+                            <p className="font-bold text-green-600">{workshop.paidBatchCount}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-gray-600">Valor Pendente</p>
+                            <p className="font-bold text-orange-600">
+                              R$ {unpaidValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-red-600">
-                          R$ {unpaidValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                        <p className="text-sm text-gray-500">Valor em aberto</p>
                       </div>
                       <ChevronRight className="h-5 w-5 text-gray-400 ml-4" />
                     </div>
