@@ -610,9 +610,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `, [invoice.id, batchId, '0.00']);
           
           // Mark batch as paid
-          await pool.query(`
+          const updateResult = await pool.query(`
             UPDATE batches SET paid = true WHERE id = $1
+            RETURNING id, code, paid
           `, [batchId]);
+          
+          console.log(`Batch ${batchId} marked as paid:`, updateResult.rows[0]);
         }
       }
       

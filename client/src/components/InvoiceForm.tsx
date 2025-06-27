@@ -162,9 +162,17 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
     onSuccess: (data) => {
       console.log('Invoice mutation successful:', data);
       toast({ title: "Fatura gerada com sucesso e lotes marcados como faturados!" });
+      
+      // Force refresh all related queries
       queryClient.invalidateQueries({ queryKey: ['/api/financial'] });
       queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
       queryClient.invalidateQueries({ queryKey: ['/api/batches'] });
+      queryClient.refetchQueries({ queryKey: ['/api/batches'] });
+      
+      // Force window reload to ensure fresh data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
       
       // Show print page
       if (showPrintPage) {

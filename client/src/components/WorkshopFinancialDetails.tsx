@@ -57,7 +57,9 @@ export default function WorkshopFinancialDetails({
                cutDate >= startDate && 
                cutDate <= endDate;
       });
-    }
+    },
+    refetchOnWindowFocus: true,
+    staleTime: 0 // Always refetch to get latest data
   });
 
   // Fetch all products for reference
