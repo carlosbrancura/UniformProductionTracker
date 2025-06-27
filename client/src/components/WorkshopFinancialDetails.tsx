@@ -301,10 +301,10 @@ export default function WorkshopFinancialDetails({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <h3 className="font-semibold text-lg">Lote {batch.code}</h3>
-                        <span className="text-sm text-gray-600">Data de Corte: {formatDate(batch.cutDate)}</span>
                         <Badge variant={batch.paid ? 'default' : 'destructive'}>
                           {batch.paid ? 'Pago' : 'Não Pago'}
                         </Badge>
+                        <span className="text-sm text-gray-600">Data de Corte: {formatDate(batch.cutDate)}</span>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
@@ -327,13 +327,6 @@ export default function WorkshopFinancialDetails({
                         </Button>
                       </div>
                     </div>
-
-                    {/* Additional return date info if available */}
-                    {batch.actualReturnDate && (
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">Retorno Real:</span> {formatDate(batch.actualReturnDate)}
-                      </div>
-                    )}
 
                     {/* Product details with expand/collapse animation */}
                     <div 
