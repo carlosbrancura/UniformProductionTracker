@@ -143,34 +143,38 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Detalhes da Fatura</h3>
             
-            <FormField
-              control={form.control}
-              name="invoiceNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Número da Fatura</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="INV-001" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Invoice Number and Due Date - Side by Side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="invoiceNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número da Fatura</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="INV-001" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="dueDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data de Vencimento</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="date" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="dueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Vencimento</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="date" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
+            {/* Notes - Reduced Size */}
             <FormField
               control={form.control}
               name="notes"
@@ -178,7 +182,12 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
                 <FormItem>
                   <FormLabel>Observações (opcional)</FormLabel>
                   <FormControl>
-                    <Textarea {...field} placeholder="Observações sobre a fatura..." rows={3} />
+                    <Textarea 
+                      {...field} 
+                      placeholder="Observações..." 
+                      rows={2} 
+                      className="resize-none"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -195,9 +204,9 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
               </Button>
             </div>
 
-            <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
+            <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3">
               {unpaidBatches.map((batch) => (
-                <div key={batch.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
+                <div key={batch.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded transition-colors">
                   <Checkbox
                     id={`batch-${batch.id}`}
                     checked={selectedBatches.includes(batch.id)}
