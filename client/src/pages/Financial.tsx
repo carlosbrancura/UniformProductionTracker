@@ -115,9 +115,7 @@ export default function Financial() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestão Financeira</h1>
-          <p className="text-gray-600 mt-1">
-            Controle de pagamentos das oficinas parceiras
-          </p>
+          <p className="text-gray-600 mt-1">Controle de pagamentos das oficinas parceiras</p>
         </div>
 
         {/* Period Info */}
@@ -129,67 +127,53 @@ export default function Financial() {
 
       {/* Financial Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Total Outstanding Amount */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total em Aberto</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              R$ {totalUnpaidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {totalPendingBatches} lotes em {financialSummary.length} oficinas
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Total Batches */}
+        {/* Total de Lotes */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Lotes</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {totalBatchCount}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              No período selecionado
-            </p>
+            <div className="text-2xl font-bold text-blue-600">{totalBatchCount}</div>
+            <p className="text-xs text-muted-foreground">no período</p>
           </CardContent>
         </Card>
 
-        {/* Pending Batches */}
+        {/* Lotes Pendentes */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lotes Pendentes</CardTitle>
+            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {totalPendingBatches}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Aguardando pagamento
-            </p>
+            <div className="text-2xl font-bold text-red-600">{totalPendingBatches}</div>
+            <p className="text-xs text-muted-foreground">aguardando pagamento</p>
           </CardContent>
         </Card>
 
-        {/* Paid Batches */}
+        {/* Lotes Pagos */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lotes Pagos</CardTitle>
+            <CardTitle className="text-sm font-medium">Pagos</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {totalPaidBatches}
+            <div className="text-2xl font-bold text-green-600">{totalPaidBatches}</div>
+            <p className="text-xs text-muted-foreground">já foram pagos</p>
+          </CardContent>
+        </Card>
+
+        {/* Valor Total Pendente */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Valor Pendente</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              R$ {totalUnpaidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Já foram pagos
-            </p>
+            <p className="text-xs text-muted-foreground">em {financialSummary.length} oficinas</p>
           </CardContent>
         </Card>
 
@@ -199,9 +183,7 @@ export default function Financial() {
       <Card>
         <CardHeader>
           <CardTitle>Resumo por Oficina</CardTitle>
-          <p className="text-sm text-gray-600">
-            Clique em uma oficina para ver detalhes dos lotes e gerar faturas
-          </p>
+          <p className="text-sm text-gray-600">Clique em uma oficina para ver detalhes dos lotes e gerar faturas</p>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -243,24 +225,24 @@ export default function Financial() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg">{workshop.workshopName}</h3>
-                        <div className="grid grid-cols-4 gap-4 text-sm mt-2">
-                          <div className="text-center">
-                            <p className="text-gray-600">Total</p>
-                            <p className="font-bold text-blue-600">{workshop.totalBatchCount}</p>
+                        <div className="flex flex-wrap gap-6 text-sm mt-2">
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold text-blue-600">{workshop.totalBatchCount}</span>
+                            <span className="text-gray-600">lotes total</span>
                           </div>
-                          <div className="text-center">
-                            <p className="text-gray-600">Pendentes</p>
-                            <p className="font-bold text-red-600">{workshop.pendingBatchCount}</p>
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold text-red-600">{workshop.pendingBatchCount}</span>
+                            <span className="text-gray-600">pendentes</span>
                           </div>
-                          <div className="text-center">
-                            <p className="text-gray-600">Pagos</p>
-                            <p className="font-bold text-green-600">{workshop.paidBatchCount}</p>
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold text-green-600">{workshop.paidBatchCount}</span>
+                            <span className="text-gray-600">pagos</span>
                           </div>
-                          <div className="text-center">
-                            <p className="text-gray-600">Valor Pendente</p>
-                            <p className="font-bold text-orange-600">
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold text-orange-600">
                               R$ {unpaidValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </p>
+                            </span>
+                            <span className="text-gray-600">pendente</span>
                           </div>
                         </div>
                       </div>
