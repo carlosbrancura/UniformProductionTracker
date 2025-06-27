@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import type { Batch } from '@shared/schema';
+import type { Batch, Product, BatchProduct } from '@shared/schema';
 
 // Form validation schema
 const invoiceFormSchema = z.object({
@@ -37,6 +37,72 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedBatches, setSelectedBatches] = useState<number[]>([]);
+  const [batchProductsData, setBatchProductsData] = useState<BatchProduct[]>([]);
+
+  // Fetch all products for reference
+  const { data: products = [] } = useQuery({
+    queryKey: ['/api/products'],
+  });
+
+  // Fetch batch products for value calculations
+  useEffect(() => {
+    const fetchBatchProducts = async () => {
+      if (unpaidBatches.length === 0) {
+        setBatchProductsData([]);
+        return;
+      }
+      
+      try {
+        const batchIds = unpaidBatches.map((batch: Batch) => batch.id);
+        
+        const response = await fetch('/api/batch-products/multiple', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batchIds })
+        });
+        
+        if (!response.ok) {
+          console.error('Failed to fetch batch products');
+          setBatchProductsData([]);
+          return;
+        }
+        
+        const data = await response.json();
+        setBatchProductsData(data || []);
+      } catch (error) {
+        console.error('Error fetching batch products:', error);
+        setBatchProductsData([]);
+      }
+    };
+
+    fetchBatchProducts();
+  }, [unpaidBatches.length]);
+
+  // Calculate batch value based on actual products
+  const calculateBatchValue = (batch: Batch) => {
+    const batchProducts = batchProductsData.filter((bp: BatchProduct) => bp.batchId === batch.id);
+    
+    if (batchProducts.length === 0) {
+      return 0;
+    }
+    
+    return batchProducts.reduce((total: number, bp: BatchProduct) => {
+      const product = (products as any[]).find((p: any) => p.id === bp.productId);
+      const productValue = parseFloat(product?.productionValue?.toString() || '0');
+      return total + (bp.quantity * productValue);
+    }, 0);
+  };
+
+  // Calculate total of selected batches
+  const calculateSelectedTotal = () => {
+    return selectedBatches.reduce((total, batchId) => {
+      const batch = unpaidBatches.find(b => b.id === batchId);
+      if (batch) {
+        return total + calculateBatchValue(batch);
+      }
+      return total;
+    }, 0);
+  };
 
   // Form setup with validation - remove selectedBatches from schema validation
   const form = useForm<Omit<InvoiceFormData, 'selectedBatches'>>({
@@ -223,7 +289,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
                       </span>
                     </div>
                     <span className="text-sm font-medium text-green-600">
-                      Valor será calculado
+                      R$ {calculateBatchValue(batch).toFixed(2)}
                     </span>
                   </label>
                 </div>
@@ -242,7 +308,7 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrin
             <div className="flex justify-between items-center">
               <span className="font-medium">Total da Fatura:</span>
               <span className="text-xl font-bold text-green-600">
-                Será calculado automaticamente
+                R$ {calculateSelectedTotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>
             <p className="text-sm text-gray-600 mt-1">
