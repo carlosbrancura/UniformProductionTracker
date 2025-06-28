@@ -452,7 +452,9 @@ export class DatabaseStorage implements IStorage {
 
   // Financial Management Implementation
   async getInvoice(id: number): Promise<Invoice | undefined> {
+    console.log('DatabaseStorage.getInvoice called with ID:', id);
     const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+    console.log('DatabaseStorage.getInvoice result:', invoice);
     return invoice || undefined;
   }
 

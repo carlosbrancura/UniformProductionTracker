@@ -30,15 +30,37 @@ export default function InvoicePrint() {
     queryKey: ['/api/products']
   });
 
+  // Fetch batch products for the invoice batches
+  const { data: batchProducts, isLoading: batchProductsLoading } = useQuery({
+    queryKey: [`/api/batch-products/multiple`],
+    queryFn: async () => {
+      if (!invoiceBatches || invoiceBatches.length === 0) return [];
+      
+      const batchIds = invoiceBatches.map((ib: any) => ib.batchId);
+      const response = await fetch('/api/batch-products/multiple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batchIds })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch batch products');
+      }
+      
+      return response.json();
+    },
+    enabled: !!(invoiceBatches && invoiceBatches.length > 0)
+  });
+
   // Auto-print when data is loaded
   useEffect(() => {
     if (invoice && invoiceBatches && workshop && products && 
-        !invoiceLoading && !batchesLoading && !workshopLoading && !productsLoading) {
+        !invoiceLoading && !batchesLoading && !workshopLoading && !productsLoading && !batchProductsLoading) {
       setTimeout(() => {
         window.print();
       }, 1000);
     }
-  }, [invoice, invoiceBatches, workshop, products, invoiceLoading, batchesLoading, workshopLoading, productsLoading]);
+  }, [invoice, invoiceBatches, workshop, products, batchProducts, invoiceLoading, batchesLoading, workshopLoading, productsLoading, batchProductsLoading]);
 
   // Debug logging
   console.log('InvoicePrint Debug:', {
@@ -47,12 +69,13 @@ export default function InvoicePrint() {
     invoiceBatches,
     workshop,
     products,
-    loading: { invoiceLoading, batchesLoading, workshopLoading, productsLoading },
+    batchProducts,
+    loading: { invoiceLoading, batchesLoading, workshopLoading, productsLoading, batchProductsLoading },
     error: invoiceError
   });
 
   // Loading state
-  if (invoiceLoading || batchesLoading || workshopLoading || productsLoading) {
+  if (invoiceLoading || batchesLoading || workshopLoading || productsLoading || batchProductsLoading) {
     return (
       <div className="min-h-screen bg-white p-8">
         <div className="text-center">
@@ -65,6 +88,7 @@ export default function InvoicePrint() {
             <p>Lotes: {batchesLoading ? 'Carregando...' : 'OK'}</p>
             <p>Oficina: {workshopLoading ? 'Carregando...' : 'OK'}</p>
             <p>Produtos: {productsLoading ? 'Carregando...' : 'OK'}</p>
+            <p>Produtos dos Lotes: {batchProductsLoading ? 'Carregando...' : 'OK'}</p>
           </div>
         </div>
       </div>
@@ -123,16 +147,29 @@ export default function InvoicePrint() {
       return null;
     }
 
-    // For the legacy data structure, we need to get batch products differently
-    // Since the batch has productId and quantity directly, use that
-    const batchProducts = [{
-      productId: batch.productId,
-      quantity: batch.quantity,
-      selectedColor: 'N/A',
-      selectedSize: 'N/A'
-    }];
+    // Get batch products for this specific batch
+    const batchProductsForBatch = (batchProducts || []).filter((bp: any) => bp.batchId === batch.id);
+    
+    // Handle both legacy and new batch structures
+    let batchProductsList = [];
+    
+    if (batchProductsForBatch.length > 0) {
+      // New structure - use fetched batch products
+      batchProductsList = batchProductsForBatch;
+    } else if (batch.productId && batch.quantity) {
+      // Legacy structure - batch has direct product info
+      batchProductsList = [{
+        productId: batch.productId,
+        quantity: batch.quantity,
+        selectedColor: 'N/A',
+        selectedSize: 'N/A'
+      }];
+    } else {
+      // No product data available
+      batchProductsList = [];
+    }
 
-    const productsWithTotals = batchProducts
+    const productsWithTotals = batchProductsList
       .filter(bp => bp.productId)
       .map((bp: any) => {
         const product = (products as any[])?.find((p: any) => p.id === bp.productId);
