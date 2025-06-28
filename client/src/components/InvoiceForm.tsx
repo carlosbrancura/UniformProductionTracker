@@ -25,7 +25,6 @@ interface InvoiceFormProps {
   workshop: any;
   unpaidBatches: Batch[];
   onClose: () => void;
-  showPrintPage: (invoice: any) => void;
 }
 
 /**
@@ -33,7 +32,7 @@ interface InvoiceFormProps {
  * 
  * Creates invoices for workshop payments with basic batch selection
  */
-export default function InvoiceForm({ workshop, unpaidBatches, onClose, showPrintPage }: InvoiceFormProps) {
+export default function InvoiceForm({ workshop, unpaidBatches, onClose }: InvoiceFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedBatches, setSelectedBatches] = useState<number[]>([]);

@@ -314,9 +314,7 @@ export default function WorkshopFinancialDetails({
                           {batch.paid ? 'Faturado' : 'Aberto'}
                         </Badge>
                         <span className="text-sm text-gray-600">Data de Corte: {formatDate(batch.cutDate)}</span>
-                        <span className="text-xs text-gray-400">
-                          (paid={batch.paid?.toString() || 'undefined'})
-                        </span>
+
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
