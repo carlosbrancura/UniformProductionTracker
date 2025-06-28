@@ -21,8 +21,8 @@ export default function InvoicePrint() {
 
   // Fetch workshop data
   const { data: workshop, isLoading: workshopLoading } = useQuery({
-    queryKey: [`/api/workshops/${invoice?.workshop_id || invoice?.workshopId}`],
-    enabled: !!(invoice?.workshop_id || invoice?.workshopId)
+    queryKey: [`/api/workshops/${(invoice as any)?.workshopId || (invoice as any)?.workshop_id}`],
+    enabled: !!((invoice as any)?.workshopId || (invoice as any)?.workshop_id)
   });
 
   // Fetch all products
@@ -34,9 +34,9 @@ export default function InvoicePrint() {
   const { data: batchProducts, isLoading: batchProductsLoading } = useQuery({
     queryKey: [`/api/batch-products/multiple`],
     queryFn: async () => {
-      if (!invoiceBatches || invoiceBatches.length === 0) return [];
+      if (!(invoiceBatches as any[])?.length) return [];
       
-      const batchIds = invoiceBatches.map((ib: any) => ib.batchId);
+      const batchIds = (invoiceBatches as any[]).map((ib: any) => ib.batchId);
       const response = await fetch('/api/batch-products/multiple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,7 +49,7 @@ export default function InvoicePrint() {
       
       return response.json();
     },
-    enabled: !!(invoiceBatches && invoiceBatches.length > 0)
+    enabled: !!((invoiceBatches as any[])?.length > 0)
   });
 
   // Auto-print when data is loaded
@@ -61,6 +61,90 @@ export default function InvoicePrint() {
       }, 1000);
     }
   }, [invoice, invoiceBatches, workshop, products, batchProducts, invoiceLoading, batchesLoading, workshopLoading, productsLoading, batchProductsLoading]);
+
+  // Process batch data with products first
+  const processedBatches = ((invoiceBatches as any[]) || []).map((invoiceBatch: any) => {
+    console.log('Processing batch:', invoiceBatch);
+    
+    // Get batch details
+    const batch = invoiceBatch.batch;
+    if (!batch) {
+      console.warn('No batch data found for:', invoiceBatch);
+      return null;
+    }
+
+    // Get batch products for this specific batch
+    const batchProductsForBatch = (batchProducts || []).filter((bp: any) => bp.batchId === batch.id);
+    
+    // Handle both legacy and new batch structures
+    let batchProductsList: any[] = [];
+    
+    if (batchProductsForBatch.length > 0) {
+      // New structure - use fetched batch products
+      batchProductsList = batchProductsForBatch;
+    } else if (batch.productId && batch.quantity) {
+      // Legacy structure - batch has direct product info
+      batchProductsList = [{
+        productId: batch.productId,
+        quantity: batch.quantity,
+        selectedColor: 'N/A',
+        selectedSize: 'N/A'
+      }];
+    } else {
+      // No product data available
+      batchProductsList = [];
+    }
+
+    const productsWithTotals = batchProductsList
+      .filter((bp: any) => bp.productId)
+      .map((bp: any) => {
+        const product = (products as any[])?.find((p: any) => p.id === bp.productId);
+        if (!product) {
+          console.warn('Product not found for ID:', bp.productId);
+          return {
+            productName: 'Produto não encontrado',
+            description: 'N/A',
+            productionValue: 0,
+            quantity: bp.quantity || 0,
+            total: 0,
+            selectedColor: bp.selectedColor || 'N/A',
+            selectedSize: bp.selectedSize || 'N/A'
+          };
+        }
+
+        const productionValue = parseFloat(product.productionValue) || 0;
+        const quantity = bp.quantity || 0;
+        const total = productionValue * quantity;
+
+        return {
+          productName: product.name || 'Nome não disponível',
+          description: product.description || 'Descrição não disponível',
+          productionValue,
+          quantity,
+          total,
+          selectedColor: bp.selectedColor || 'N/A',
+          selectedSize: bp.selectedSize || 'N/A'
+        };
+      });
+
+    const batchTotal = productsWithTotals.reduce((sum: number, p: any) => sum + p.total, 0);
+
+    return {
+      id: batch.id,
+      code: batch.code,
+      cutDate: batch.cutDate || '',
+      expectedReturnDate: batch.expectedReturnDate,
+      actualReturnDate: batch.actualReturnDate,
+      sentToProductionDate: batch.sentToProductionDate,
+      status: batch.status,
+      observations: batch.observations,
+      products: productsWithTotals,
+      batchTotal
+    };
+  }).filter(Boolean);
+
+  // Calculate total
+  const grandTotal = processedBatches.reduce((sum: number, batch: any) => sum + batch.batchTotal, 0);
 
   // Debug logging
   console.log('InvoicePrint Debug:', {
@@ -137,75 +221,7 @@ export default function InvoicePrint() {
     );
   }
 
-  // Process batch data with products
-  const processedBatches = (invoiceBatches || []).map((invoiceBatch: any) => {
-    console.log('Processing batch:', invoiceBatch);
-    
-    // Get batch details
-    const batch = invoiceBatch.batch;
-    if (!batch) {
-      console.warn('No batch data found for:', invoiceBatch);
-      return null;
-    }
 
-    // Get batch products for this specific batch
-    const batchProductsForBatch = (batchProducts || []).filter((bp: any) => bp.batchId === batch.id);
-    
-    // Handle both legacy and new batch structures
-    let batchProductsList: any[] = [];
-    
-    if (batchProductsForBatch.length > 0) {
-      // New structure - use fetched batch products
-      batchProductsList = batchProductsForBatch;
-    } else if (batch.productId && batch.quantity) {
-      // Legacy structure - batch has direct product info
-      batchProductsList = [{
-        productId: batch.productId,
-        quantity: batch.quantity,
-        selectedColor: 'N/A',
-        selectedSize: 'N/A'
-      }];
-    } else {
-      // No product data available
-      batchProductsList = [];
-    }
-
-    const productsWithTotals = batchProductsList
-      .filter(bp => bp.productId)
-      .map((bp: any) => {
-        const product = (products as any[])?.find((p: any) => p.id === bp.productId);
-        if (!product) {
-          console.warn('Product not found for ID:', bp.productId);
-          return null;
-        }
-
-        const productionValue = parseFloat(product.productionValue?.toString() || '0');
-        const total = bp.quantity * productionValue;
-
-        return {
-          productName: product.name || 'Produto não identificado',
-          selectedColor: bp.selectedColor || 'N/A',
-          selectedSize: bp.selectedSize || 'N/A',
-          quantity: bp.quantity,
-          productionValue,
-          total
-        };
-      })
-      .filter(Boolean);
-
-    const batchTotal = productsWithTotals.reduce((sum: number, p: any) => sum + p.total, 0);
-
-    return {
-      id: batch.id,
-      code: batch.code || 'N/A',
-      cutDate: batch.cutDate || '',
-      products: productsWithTotals,
-      batchTotal
-    };
-  }).filter(Boolean);
-
-  // Calculate total
-  const grandTotal = processedBatches.reduce((sum: number, batch: any) => sum + batch.batchTotal, 0);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
@@ -351,17 +367,64 @@ export default function InvoicePrint() {
       </div>
 
       {/* Summary and Total */}
-      <div className="border-t-2 border-gray-800 pt-4">
-        <div className="text-right">
-          <p className="text-2xl font-bold">
-            Total Geral: {formatCurrency(grandTotal)}
+      <div className="border-t-2 border-gray-400 pt-6">
+        <div className="grid grid-cols-2 gap-8">
+          {/* Summary */}
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Resumo da Fatura</h3>
+            <div className="space-y-2">
+              <p><strong>Total de Lotes:</strong> {processedBatches.length}</p>
+              <p><strong>Total de Peças:</strong> {processedBatches.reduce((sum: number, batch: any) => {
+                return sum + (batch.products || []).reduce((batchSum: number, product: any) => batchSum + (product.quantity || 0), 0);
+              }, 0)}</p>
+              <p><strong>Período de Serviço:</strong> {processedBatches.length > 0 ? 
+                `${formatDate(Math.min(...processedBatches.map((b: any) => new Date(b.cutDate || new Date()).getTime())).toString())} a ${formatDate(Math.max(...processedBatches.map((b: any) => new Date(b.cutDate || new Date()).getTime())).toString())}` 
+                : 'N/A'}</p>
+            </div>
+          </div>
+
+          {/* Total Amount */}
+          <div className="text-right">
+            <div className="bg-blue-600 text-white p-6 rounded-lg shadow-lg">
+              <h2 className="text-lg font-semibold mb-2">VALOR TOTAL</h2>
+              <div className="text-3xl font-bold">
+                {formatCurrency(grandTotal)}
+              </div>
+              <p className="text-blue-100 mt-2 text-sm">
+                {(invoice as any)?.status === 'pending' ? 'Valor em aberto' : 'Valor faturado'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Information */}
+        <div className="mt-8 bg-yellow-50 border border-yellow-200 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold mb-3 text-gray-800">Informações de Pagamento</h3>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p><strong>Forma de Pagamento:</strong> Conforme acordo</p>
+              <p><strong>Prazo de Pagamento:</strong> {formatDate((invoice as any)?.dueDate || (invoice as any)?.due_date || new Date().toISOString())}</p>
+            </div>
+            <div>
+              <p><strong>Status:</strong> <span className={`font-semibold ${(invoice as any)?.status === 'pending' ? 'text-orange-600' : 'text-green-600'}`}>
+                {(invoice as any)?.status === 'pending' ? 'Aberto' : 'Faturado'}
+              </span></p>
+              {(invoice as any)?.paidDate && (
+                <p><strong>Data de Pagamento:</strong> {formatDate((invoice as any).paidDate)}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 text-center text-gray-600 border-t border-gray-300 pt-4">
+          <p className="text-sm">
+            Esta fatura foi gerada automaticamente pelo sistema em {formatDate(new Date().toISOString())}
+          </p>
+          <p className="text-xs mt-2">
+            Em caso de dúvidas, entre em contato com o setor financeiro
           </p>
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="mt-8 text-center text-gray-600">
-        <p>Fatura gerada em {formatDate(new Date().toISOString())}</p>
       </div>
     </div>
   );
