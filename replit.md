@@ -124,6 +124,7 @@ This is a full-stack production management system designed for textile and garme
 - **Start Command**: `npm run start`
 
 ## Changelog
+- June 28, 2025: Invoice Print Layout Optimized - reorganized header to be more compact, removed unnecessary fields (contact, address, phone, email, responsible person), simplified batch layout with single-line product display, removed blue background from batch headers, eliminated description column for more space
 - June 28, 2025: Invoice Print System Reimplemented - completely rebuilt print functionality using static HTML page to avoid React DOM conflicts, eliminated complex routing issues, improved print reliability and performance
 - June 27, 2025: Invoice System Improvements - implemented proper sequential invoice numbering with format [3 letters]-[ddmmyy]-[sequential 4 digits starting 1000], automatic batch payment marking, status labels changed from 'Pago/Não pago' to 'Faturado/Aberto'
 - June 26, 2025: Workshop Financial Details - reorganized layout with button repositioning, removed print report button, changed to show all batches with payment status, added pagination breaks every 15 items
