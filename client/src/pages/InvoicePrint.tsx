@@ -84,7 +84,7 @@ export default function InvoicePrint() {
             };
           });
 
-          const batchTotal = productsWithTotals.reduce((sum, p) => sum + p.total, 0);
+          const batchTotal = productsWithTotals.reduce((sum: number, p: any) => sum + p.total, 0);
 
           return {
             id: invoiceBatch.batchId,

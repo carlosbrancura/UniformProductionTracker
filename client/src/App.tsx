@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,10 +8,22 @@ import Products from "@/pages/Products";
 import Workshops from "@/pages/Workshops";
 import Users from "@/pages/Users";
 import Financial from "@/pages/Financial";
+import InvoicePrint from "@/pages/InvoicePrint";
 import Header from "@/components/Header";
 import Navigation from "@/components/Navigation";
 
 function Router() {
+  const [location] = useLocation();
+  const isPrintPage = location.startsWith('/invoice/print/');
+
+  if (isPrintPage) {
+    return (
+      <Switch>
+        <Route path="/invoice/print/:id" component={InvoicePrint} />
+      </Switch>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white shadow-sm border-b">

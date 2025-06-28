@@ -691,7 +691,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const invoiceId = parseInt(req.params.id);
       const invoiceBatches = await storage.getInvoiceBatches(invoiceId);
-      res.json(invoiceBatches);
+      
+      // Enhance with batch details
+      const batchesWithDetails = await Promise.all(
+        invoiceBatches.map(async (ib) => {
+          const batch = await storage.getBatch(ib.batchId);
+          return {
+            ...ib,
+            batch
+          };
+        })
+      );
+      
+      res.json(batchesWithDetails);
     } catch (error) {
       console.error('Error fetching invoice batches:', error);
       res.status(500).json({ error: 'Failed to fetch invoice batches' });
