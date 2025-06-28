@@ -8,23 +8,11 @@ import Products from "@/pages/Products";
 import Workshops from "@/pages/Workshops";
 import Users from "@/pages/Users";
 import Financial from "@/pages/Financial";
-import InvoicePrint from "@/pages/InvoicePrint";
+
 import Header from "@/components/Header";
 import Navigation from "@/components/Navigation";
 
 function Router() {
-  const [location] = useLocation();
-  
-  // Handle print pages with minimal layout
-  if (location.startsWith('/invoice/print/')) {
-    return (
-      <Switch>
-        <Route path="/invoice/print/:invoiceId" component={InvoicePrint} />
-      </Switch>
-    );
-  }
-
-  // Handle regular pages with full layout
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white shadow-sm border-b">

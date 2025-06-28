@@ -106,8 +106,8 @@ export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
   };
 
   const handlePrintInvoice = (invoice: Invoice) => {
-    // Open print page in new window
-    const printUrl = `/invoice/print/${invoice.id}`;
+    // Open static HTML print page in new window
+    const printUrl = `/invoice-print.html?id=${invoice.id}`;
     window.open(printUrl, '_blank', 'width=800,height=600,scrollbars=yes');
   };
 

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impressão de Fatura</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .workshop-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 15px;
+        }
+        
+        .invoice-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .info-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .info-section h3 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .info-section p {
+            margin-bottom: 8px;
+        }
+        
+        .batch-section {
+            margin: 30px 0;
+        }
+        
+        .batch-header {
+            background: #2563eb;
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #ddd;
+        }
+        
+        .products-table th,
+        .products-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        
+        .products-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .products-table .text-right {
+            text-align: right;
+        }
+        
+        .products-table .text-center {
+            text-align: center;
+        }
+        
+        .batch-total {
+            background: #e3f2fd;
+            font-weight: bold;
+            color: #2563eb;
+        }
+        
+        .total-section {
+            margin-top: 30px;
+            border-top: 2px solid #333;
+            padding-top: 20px;
+        }
+        
+        .grand-total {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .grand-total h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .grand-total .amount {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 50px;
+            color: #dc2626;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            
+            .container {
+                max-width: none;
+                margin: 0;
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 28px;
+            }
+            
+            .workshop-name {
+                font-size: 20px;
+            }
+            
+            .batch-header {
+                font-size: 16px;
+                padding: 10px;
+            }
+            
+            .products-table th,
+            .products-table td {
+                padding: 8px;
+                font-size: 12px;
+            }
+            
+            .grand-total .amount {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading" class="loading">
+            <h2>Carregando fatura...</h2>
+            <p>Aguarde enquanto os dados são carregados.</p>
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            <h2>Erro ao carregar fatura</h2>
+            <p id="error-message">Fatura não encontrada</p>
+        </div>
+        
+        <div id="content" style="display: none;">
+            <!-- Content will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Get invoice ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const invoiceId = urlParams.get('id');
+        
+        if (!invoiceId) {
+            showError('ID da fatura não fornecido na URL');
+        } else {
+            loadInvoiceData(invoiceId);
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('content').style.display = 'none';
+        }
+        
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('error-message').textContent = message;
+        }
+        
+        function showContent() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+        }
+        
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(value);
+        }
+        
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('pt-BR');
+        }
+        
+        async function loadInvoiceData(invoiceId) {
+            try {
+                showLoading();
+                
+                // Fetch all required data
+                const [invoiceResponse, batchesResponse, productsResponse, workshopsResponse] = await Promise.all([
+                    fetch(`/api/invoices/${invoiceId}`),
+                    fetch(`/api/invoices/${invoiceId}/batches`),
+                    fetch('/api/products'),
+                    fetch('/api/workshops')
+                ]);
+                
+                if (!invoiceResponse.ok) {
+                    throw new Error(`Fatura não encontrada (ID: ${invoiceId})`);
+                }
+                
+                const invoice = await invoiceResponse.json();
+                const invoiceBatches = await batchesResponse.json();
+                const products = await productsResponse.json();
+                const workshops = await workshopsResponse.json();
+                
+                // Find the workshop
+                const workshop = workshops.find(w => w.id === invoice.workshopId);
+                if (!workshop) {
+                    throw new Error('Oficina não encontrada');
+                }
+                
+                // Get batch products
+                const batchIds = invoiceBatches.map(ib => ib.batchId);
+                let batchProducts = [];
+                
+                if (batchIds.length > 0) {
+                    const batchProductsResponse = await fetch('/api/batch-products/multiple', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ batchIds })
+                    });
+                    
+                    if (batchProductsResponse.ok) {
+                        batchProducts = await batchProductsResponse.json();
+                    }
+                }
+                
+                // Process and render the invoice
+                renderInvoice(invoice, invoiceBatches, workshop, products, batchProducts);
+                
+                // Auto-print after a delay
+                setTimeout(() => {
+                    window.print();
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error loading invoice:', error);
+                showError(error.message);
+            }
+        }
+        
+        function renderInvoice(invoice, invoiceBatches, workshop, products, batchProducts) {
+            let grandTotal = 0;
+            
+            // Process batches
+            const processedBatches = invoiceBatches.map(invoiceBatch => {
+                const batch = invoiceBatch.batch;
+                if (!batch) return null;
+                
+                // Get batch products for this specific batch
+                const batchProductsForBatch = batchProducts.filter(bp => bp.batchId === batch.id);
+                
+                // Handle both legacy and new batch structures
+                let batchProductsList = [];
+                
+                if (batchProductsForBatch.length > 0) {
+                    batchProductsList = batchProductsForBatch;
+                } else if (batch.productId && batch.quantity) {
+                    batchProductsList = [{
+                        productId: batch.productId,
+                        quantity: batch.quantity,
+                        selectedColor: 'N/A',
+                        selectedSize: 'N/A'
+                    }];
+                }
+                
+                const productsWithTotals = batchProductsList
+                    .filter(bp => bp.productId)
+                    .map(bp => {
+                        const product = products.find(p => p.id === bp.productId);
+                        if (!product) {
+                            return {
+                                productName: 'Produto não encontrado',
+                                description: 'N/A',
+                                productionValue: 0,
+                                quantity: bp.quantity || 0,
+                                total: 0,
+                                selectedColor: bp.selectedColor || 'N/A',
+                                selectedSize: bp.selectedSize || 'N/A'
+                            };
+                        }
+                        
+                        const productionValue = parseFloat(product.productionValue) || 0;
+                        const quantity = bp.quantity || 0;
+                        const total = productionValue * quantity;
+                        
+                        return {
+                            productName: product.name || 'Nome não disponível',
+                            description: product.description || 'Descrição não disponível',
+                            productionValue,
+                            quantity,
+                            total,
+                            selectedColor: bp.selectedColor || 'N/A',
+                            selectedSize: bp.selectedSize || 'N/A'
+                        };
+                    });
+                
+                const batchTotal = productsWithTotals.reduce((sum, p) => sum + p.total, 0);
+                grandTotal += batchTotal;
+                
+                return {
+                    ...batch,
+                    products: productsWithTotals,
+                    batchTotal
+                };
+            }).filter(Boolean);
+            
+            // Render HTML
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="header">
+                    <h1>FATURA DE SERVIÇOS</h1>
+                    <div class="workshop-name">${workshop.name}</div>
+                    <div class="invoice-info">
+                        <div>
+                            <strong>Número da Fatura:</strong> ${invoice.invoiceNumber}<br>
+                            <strong>Data de Emissão:</strong> ${formatDate(invoice.issueDate)}
+                        </div>
+                        <div>
+                            <strong>Data de Vencimento:</strong> ${formatDate(invoice.dueDate)}<br>
+                            <strong>Status:</strong> ${invoice.status === 'pending' ? 'Aberto' : 'Faturado'}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-section">
+                    <h3>Informações da Oficina</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <p><strong>Nome:</strong> ${workshop.name}</p>
+                            <p><strong>Responsável:</strong> ${workshop.manager || 'N/A'}</p>
+                            <p><strong>Contato:</strong> ${workshop.contact || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p><strong>Endereço:</strong> ${workshop.address || 'N/A'}</p>
+                            <p><strong>Telefone:</strong> ${workshop.phone || 'N/A'}</p>
+                            <p><strong>Email:</strong> ${workshop.email || 'N/A'}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                ${invoice.notes ? `
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
+                    <h3>Observações:</h3>
+                    <p>${invoice.notes}</p>
+                </div>
+                ` : ''}
+                
+                <h2 style="margin: 30px 0 20px 0; border-bottom: 1px solid #ddd; padding-bottom: 10px;">Detalhamento dos Serviços</h2>
+                
+                ${processedBatches.map(batch => `
+                    <div class="batch-section">
+                        <div class="batch-header">
+                            Lote ${batch.code} - Data de Corte: ${formatDate(batch.cutDate)}
+                            ${batch.expectedReturnDate ? `<br><span style="font-size: 14px; opacity: 0.9;">Data Prevista de Retorno: ${formatDate(batch.expectedReturnDate)}</span>` : ''}
+                        </div>
+                        
+                        <table class="products-table">
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Descrição</th>
+                                    <th class="text-center">Cor</th>
+                                    <th class="text-center">Tamanho</th>
+                                    <th class="text-right">Qtd</th>
+                                    <th class="text-right">Valor Unit.</th>
+                                    <th class="text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${batch.products.length > 0 ? batch.products.map(product => `
+                                    <tr>
+                                        <td>${product.productName}</td>
+                                        <td style="font-size: 12px; color: #666;">${product.description}</td>
+                                        <td class="text-center">${product.selectedColor}</td>
+                                        <td class="text-center">${product.selectedSize}</td>
+                                        <td class="text-right">${product.quantity}</td>
+                                        <td class="text-right">${formatCurrency(product.productionValue)}</td>
+                                        <td class="text-right">${formatCurrency(product.total)}</td>
+                                    </tr>
+                                `).join('') : `
+                                    <tr>
+                                        <td colspan="7" style="text-align: center; padding: 20px; color: #666; font-style: italic;">
+                                            Nenhum produto encontrado para este lote
+                                        </td>
+                                    </tr>
+                                `}
+                                <tr class="batch-total">
+                                    <td colspan="6" class="text-right"><strong>Subtotal do Lote:</strong></td>
+                                    <td class="text-right"><strong>${formatCurrency(batch.batchTotal)}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `).join('')}
+                
+                <div class="total-section">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <div class="info-section">
+                            <h3>Resumo da Fatura</h3>
+                            <p><strong>Total de Lotes:</strong> ${processedBatches.length}</p>
+                            <p><strong>Total de Peças:</strong> ${processedBatches.reduce((sum, batch) => {
+                                return sum + batch.products.reduce((batchSum, product) => batchSum + product.quantity, 0);
+                            }, 0)}</p>
+                            <p><strong>Status:</strong> ${invoice.status === 'pending' ? 'Valor em aberto' : 'Valor faturado'}</p>
+                        </div>
+                        
+                        <div class="grand-total">
+                            <h2>VALOR TOTAL</h2>
+                            <div class="amount">${formatCurrency(grandTotal)}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p>Esta fatura foi gerada automaticamente pelo sistema em ${formatDate(new Date().toISOString())}</p>
+                    <p style="font-size: 12px; margin-top: 10px;">Em caso de dúvidas, entre em contato com o setor financeiro</p>
+                </div>
+            `;
+            
+            showContent();
+        }
+    </script>
+</body>
+</html>
