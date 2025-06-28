@@ -168,15 +168,15 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
       queryClient.invalidateQueries({ queryKey: ['/api/batches'] });
       queryClient.refetchQueries({ queryKey: ['/api/batches'] });
       
+      // Open print page in new window
+      const printUrl = `/invoice/print/${data.id}`;
+      window.open(printUrl, '_blank', 'width=800,height=600,scrollbars=yes');
+      
       // Force window reload to ensure fresh data
       setTimeout(() => {
         window.location.reload();
       }, 1000);
       
-      // Show print page
-      if (showPrintPage) {
-        showPrintPage(data);
-      }
       onClose();
     },
     onError: (error: Error) => {
