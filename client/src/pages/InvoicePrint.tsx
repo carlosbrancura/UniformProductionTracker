@@ -1,244 +1,278 @@
-import { useEffect, useState } from 'react';
-import { useLocation } from 'wouter';
-
-interface InvoiceData {
-  id: number;
-  invoiceNumber: string;
-  issueDate: string;
-  totalAmount: string;
-  notes?: string;
-  workshop: {
-    name: string;
-  };
-  batches: Array<{
-    id: number;
-    code: string;
-    cutDate: string;
-    products: Array<{
-      productName: string;
-      selectedColor: string;
-      quantity: number;
-      productionValue: number;
-      total: number;
-    }>;
-    batchTotal: number;
-  }>;
-}
+import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useParams } from 'wouter';
 
 export default function InvoicePrint() {
-  const [location] = useLocation();
-  const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Extract invoice ID from URL
+  const params = useParams();
+  const invoiceId = params.id;
 
+  // Fetch invoice data
+  const { data: invoice, isLoading: invoiceLoading, error: invoiceError } = useQuery({
+    queryKey: [`/api/invoices/${invoiceId}`],
+    enabled: !!invoiceId
+  });
+
+  // Fetch invoice batches
+  const { data: invoiceBatches, isLoading: batchesLoading } = useQuery({
+    queryKey: [`/api/invoices/${invoiceId}/batches`],
+    enabled: !!invoiceId
+  });
+
+  // Fetch workshop data
+  const { data: workshop, isLoading: workshopLoading } = useQuery({
+    queryKey: [`/api/workshops/${invoice?.workshop_id || invoice?.workshopId}`],
+    enabled: !!(invoice?.workshop_id || invoice?.workshopId)
+  });
+
+  // Fetch all products
+  const { data: products, isLoading: productsLoading } = useQuery({
+    queryKey: ['/api/products']
+  });
+
+  // Auto-print when data is loaded
   useEffect(() => {
-    // Extract invoice ID from URL
-    const pathParts = location.split('/');
-    const invoiceId = pathParts[pathParts.length - 1];
+    if (invoice && invoiceBatches && workshop && products && 
+        !invoiceLoading && !batchesLoading && !workshopLoading && !productsLoading) {
+      setTimeout(() => {
+        window.print();
+      }, 1000);
+    }
+  }, [invoice, invoiceBatches, workshop, products, invoiceLoading, batchesLoading, workshopLoading, productsLoading]);
+
+  // Debug logging
+  console.log('InvoicePrint Debug:', {
+    invoiceId,
+    invoice,
+    invoiceBatches,
+    workshop,
+    products,
+    loading: { invoiceLoading, batchesLoading, workshopLoading, productsLoading },
+    error: invoiceError
+  });
+
+  // Loading state
+  if (invoiceLoading || batchesLoading || workshopLoading || productsLoading) {
+    return (
+      <div className="min-h-screen bg-white p-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-600 mb-4">
+            Carregando fatura...
+          </h1>
+          <div className="text-sm text-gray-500">
+            <p>ID da fatura: {invoiceId}</p>
+            <p>Invoice: {invoiceLoading ? 'Carregando...' : 'OK'}</p>
+            <p>Lotes: {batchesLoading ? 'Carregando...' : 'OK'}</p>
+            <p>Oficina: {workshopLoading ? 'Carregando...' : 'OK'}</p>
+            <p>Produtos: {productsLoading ? 'Carregando...' : 'OK'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (invoiceError) {
+    console.error('Invoice error details:', invoiceError);
+    return (
+      <div className="min-h-screen bg-white p-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">
+            Erro ao carregar fatura
+          </h1>
+          <p className="text-gray-600 mb-4">
+            ID da fatura: {invoiceId}
+          </p>
+          <p className="text-gray-600">
+            {invoiceError instanceof Error ? invoiceError.message : 'Erro desconhecido'}
+          </p>
+          <div className="mt-4 text-sm text-gray-500">
+            <p>Status da requisição: {(invoiceError as any)?.status || 'Desconhecido'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Data validation
+  if (!invoice || !workshop) {
+    return (
+      <div className="min-h-screen bg-white p-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">
+            Dados incompletos
+          </h1>
+          <p className="text-gray-600">
+            Fatura: {invoice ? 'OK' : 'Não encontrada'}<br/>
+            Oficina: {workshop ? 'OK' : 'Não encontrada'}<br/>
+            Lotes: {invoiceBatches ? invoiceBatches.length : 0} encontrados
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Process batch data with products
+  const processedBatches = (invoiceBatches || []).map((invoiceBatch: any) => {
+    console.log('Processing batch:', invoiceBatch);
     
-    if (invoiceId && invoiceId !== 'print') {
-      fetchInvoiceData(parseInt(invoiceId));
+    // Get batch details
+    const batch = invoiceBatch.batch;
+    if (!batch) {
+      console.warn('No batch data found for:', invoiceBatch);
+      return null;
     }
-  }, [location]);
 
-  const fetchInvoiceData = async (invoiceId: number) => {
-    try {
-      // Fetch invoice details
-      const invoiceResponse = await fetch(`/api/invoices/${invoiceId}`);
-      const invoice = await invoiceResponse.json();
+    // For the legacy data structure, we need to get batch products differently
+    // Since the batch has productId and quantity directly, use that
+    const batchProducts = [{
+      productId: batch.productId,
+      quantity: batch.quantity,
+      selectedColor: 'N/A',
+      selectedSize: 'N/A'
+    }];
 
-      // Fetch workshop details
-      const workshopResponse = await fetch(`/api/workshops/${invoice.workshopId}`);
-      const workshop = await workshopResponse.json();
+    const productsWithTotals = batchProducts
+      .filter(bp => bp.productId)
+      .map((bp: any) => {
+        const product = (products as any[])?.find((p: any) => p.id === bp.productId);
+        if (!product) {
+          console.warn('Product not found for ID:', bp.productId);
+          return null;
+        }
 
-      // Fetch invoice batches
-      const batchesResponse = await fetch(`/api/invoices/${invoiceId}/batches`);
-      const invoiceBatches = await batchesResponse.json();
+        const productionValue = parseFloat(product.productionValue?.toString() || '0');
+        const total = bp.quantity * productionValue;
 
-      // Fetch all products for reference
-      const productsResponse = await fetch('/api/products');
-      const products = await productsResponse.json();
+        return {
+          productName: product.name || 'Produto não identificado',
+          selectedColor: bp.selectedColor || 'N/A',
+          selectedSize: bp.selectedSize || 'N/A',
+          quantity: bp.quantity,
+          productionValue,
+          total
+        };
+      })
+      .filter(Boolean);
 
-      // Build detailed batch data with products
-      const batchesWithDetails = await Promise.all(
-        invoiceBatches.map(async (invoiceBatch: any) => {
-          // Fetch batch products
-          const batchProductsResponse = await fetch(`/api/batch-products/multiple`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ batchIds: [invoiceBatch.batchId] })
-          });
-          const batchProducts = await batchProductsResponse.json();
+    const batchTotal = productsWithTotals.reduce((sum: number, p: any) => sum + p.total, 0);
 
-          // Calculate products with totals
-          const productsWithTotals = batchProducts.map((bp: any) => {
-            const product = products.find((p: any) => p.id === bp.productId);
-            const productionValue = parseFloat(product?.productionValue || '0');
-            const total = bp.quantity * productionValue;
+    return {
+      id: batch.id,
+      code: batch.code || 'N/A',
+      cutDate: batch.cutDate || '',
+      products: productsWithTotals,
+      batchTotal
+    };
+  }).filter(Boolean);
 
-            return {
-              productName: product?.name || 'Produto não encontrado',
-              selectedColor: bp.selectedColor || 'N/A',
-              quantity: bp.quantity,
-              productionValue,
-              total
-            };
-          });
-
-          const batchTotal = productsWithTotals.reduce((sum: number, p: any) => sum + p.total, 0);
-
-          return {
-            id: invoiceBatch.batchId,
-            code: invoiceBatch.batch?.code || 'N/A',
-            cutDate: invoiceBatch.batch?.cutDate || '',
-            products: productsWithTotals,
-            batchTotal
-          };
-        })
-      );
-
-      setInvoiceData({
-        ...invoice,
-        workshop,
-        batches: batchesWithDetails
-      });
-    } catch (error) {
-      console.error('Error fetching invoice data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Calculate total
+  const grandTotal = processedBatches.reduce((sum: number, batch: any) => sum + batch.batchTotal, 0);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
   const formatCurrency = (value: number) => {
-    return value.toLocaleString('pt-BR', {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    });
+    }).format(value);
   };
-
-  useEffect(() => {
-    // Auto-print when data is loaded
-    if (invoiceData && !loading) {
-      const timer = setTimeout(() => {
-        window.print();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [invoiceData, loading]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Carregando fatura...</div>
-      </div>
-    );
-  }
-
-  if (!invoiceData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-red-600">Erro ao carregar fatura</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-white p-8 print:p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-4">FATURA DE SERVIÇOS</h1>
-          
-          {/* Workshop Name - Highlighted */}
-          <div className="bg-gray-100 p-4 rounded-lg mb-4 inline-block">
-            <h2 className="text-2xl font-bold text-blue-600">
-              {invoiceData.workshop.name}
-            </h2>
-          </div>
-          
-          {/* Invoice Details */}
-          <div className="flex justify-center gap-8 text-lg">
-            <span><strong>Fatura:</strong> {invoiceData.invoiceNumber}</span>
-            <span><strong>Data:</strong> {formatDate(invoiceData.issueDate)}</span>
-          </div>
-        </div>
-
-        {/* Observations */}
-        {invoiceData.notes && (
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">Observações:</h3>
-            <div className="bg-gray-50 p-4 rounded border">
-              {invoiceData.notes}
-            </div>
-          </div>
-        )}
-
-        {/* Batches Section */}
-        <div className="mb-8">
-          <h3 className="text-xl font-bold mb-4 border-b-2 border-gray-300 pb-2">LOTES</h3>
-          
-          {invoiceData.batches.map((batch) => (
-            <div key={batch.id} className="mb-6 border rounded-lg p-4 bg-gray-50">
-              {/* Batch Header */}
-              <div className="flex justify-between items-center mb-3 pb-2 border-b">
-                <div className="flex gap-4">
-                  <span className="font-bold text-lg">Lote {batch.code}</span>
-                  <span className="text-gray-600">Data de Corte: {formatDate(batch.cutDate)}</span>
-                </div>
-                <div className="text-lg font-bold text-green-600">
-                  Valor Total: {formatCurrency(batch.batchTotal)}
-                </div>
-              </div>
-
-              {/* Products List */}
-              <div className="space-y-1">
-                {batch.products.map((product, index) => (
-                  <div key={index} className="text-sm flex justify-between items-center py-1 border-b border-gray-200 last:border-b-0">
-                    <div className="flex-1">
-                      <span className="font-medium">{product.productName}</span>
-                      <span className="text-gray-600 ml-2">- {product.selectedColor}</span>
-                    </div>
-                    <div className="flex gap-4 text-right">
-                      <span className="w-16">Qtd: {product.quantity}</span>
-                      <span className="w-20">{formatCurrency(product.productionValue)}</span>
-                      <span className="w-20 font-medium">{formatCurrency(product.total)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Total */}
-        <div className="border-t-2 border-gray-400 pt-4">
-          <div className="flex justify-end">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <span className="text-xl font-bold">
-                TOTAL GERAL: {formatCurrency(parseFloat(invoiceData.totalAmount))}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Print Footer */}
-        <div className="mt-8 text-center text-gray-500 text-sm print:block hidden">
-          <p>Fatura gerada em {formatDate(new Date().toISOString())}</p>
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">FATURA</h1>
+        <div className="text-lg">
+          <p className="font-semibold text-blue-600">{workshop.name}</p>
+          <p className="text-gray-600">Número: {invoice.invoice_number || invoice.invoiceNumber}</p>
+          <p className="text-gray-600">Data: {formatDate(invoice.issue_date || invoice.issueDate)}</p>
         </div>
       </div>
 
-      {/* Print Styles */}
-      <style>{`
-        @media print {
-          body { margin: 0; }
-          .print\\:p-4 { padding: 1rem !important; }
-          .print\\:block { display: block !important; }
-          .print\\:hidden { display: none !important; }
-        }
-      `}</style>
+      {/* Invoice Details */}
+      <div className="mb-8">
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <p><strong>Oficina:</strong> {workshop.name}</p>
+            <p><strong>Responsável:</strong> {workshop.manager || 'N/A'}</p>
+          </div>
+          <div>
+            <p><strong>Data de Vencimento:</strong> {formatDate(invoice.due_date || invoice.dueDate)}</p>
+            <p><strong>Status:</strong> {invoice.status === 'pending' ? 'Pendente' : 'Pago'}</p>
+          </div>
+        </div>
+        
+        {invoice.notes && (
+          <div className="mt-4">
+            <p><strong>Observações:</strong> {invoice.notes}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Batches Table */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Lotes Inclusos</h2>
+        
+        {processedBatches.map((batch: any, index: number) => (
+          <div key={batch.id} className="mb-6 border border-gray-300 rounded">
+            <div className="bg-gray-100 p-3">
+              <h3 className="font-semibold">
+                Lote {batch.code} - Data de Corte: {formatDate(batch.cutDate)}
+              </h3>
+            </div>
+            
+            <div className="p-3">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Produto</th>
+                    <th className="text-left p-2">Cor</th>
+                    <th className="text-left p-2">Tamanho</th>
+                    <th className="text-right p-2">Qtd</th>
+                    <th className="text-right p-2">Valor Unit.</th>
+                    <th className="text-right p-2">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {batch.products.map((product: any, pIndex: number) => (
+                    <tr key={pIndex} className="border-b">
+                      <td className="p-2">{product.productName}</td>
+                      <td className="p-2">{product.selectedColor}</td>
+                      <td className="p-2">{product.selectedSize}</td>
+                      <td className="text-right p-2">{product.quantity}</td>
+                      <td className="text-right p-2">{formatCurrency(product.productionValue)}</td>
+                      <td className="text-right p-2">{formatCurrency(product.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="font-semibold bg-gray-50">
+                    <td colSpan={5} className="text-right p-2">Total do Lote:</td>
+                    <td className="text-right p-2">{formatCurrency(batch.batchTotal)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Total */}
+      <div className="border-t-2 border-gray-800 pt-4">
+        <div className="text-right">
+          <p className="text-2xl font-bold">
+            Total Geral: {formatCurrency(grandTotal)}
+          </p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-8 text-center text-gray-600">
+        <p>Fatura gerada em {formatDate(new Date().toISOString())}</p>
+      </div>
     </div>
   );
 }
