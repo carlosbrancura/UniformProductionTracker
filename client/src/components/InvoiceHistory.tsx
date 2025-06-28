@@ -205,7 +205,7 @@ export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
                 Imprimir
               </Button>
               
-              {invoice.status === 'pending' && (
+              {invoice.status !== 'paid' && (
                 <Button
                   size="sm"
                   onClick={() => handleMarkAsPaid(invoice.id)}
