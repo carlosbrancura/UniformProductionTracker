@@ -1,11 +1,9 @@
-import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useParams } from 'wouter';
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "wouter";
+import { useEffect } from "react";
 
 export default function InvoicePrint() {
-  // Extract invoice ID from URL
-  const params = useParams();
-  const invoiceId = params.id;
+  const { invoiceId } = useParams<{ invoiceId: string }>();
 
   // Fetch invoice data
   const { data: invoice, isLoading: invoiceLoading, error: invoiceError } = useQuery({
@@ -21,8 +19,8 @@ export default function InvoicePrint() {
 
   // Fetch workshop data
   const { data: workshop, isLoading: workshopLoading } = useQuery({
-    queryKey: [`/api/workshops/${(invoice as any)?.workshopId || (invoice as any)?.workshop_id}`],
-    enabled: !!((invoice as any)?.workshopId || (invoice as any)?.workshop_id)
+    queryKey: [`/api/workshops/${(invoice as any)?.workshopId}`],
+    enabled: !!(invoice as any)?.workshopId
   });
 
   // Fetch all products
@@ -62,7 +60,7 @@ export default function InvoicePrint() {
     }
   }, [invoice, invoiceBatches, workshop, products, batchProducts, invoiceLoading, batchesLoading, workshopLoading, productsLoading, batchProductsLoading]);
 
-  // Process batch data with products first
+  // Process batch data with products
   const processedBatches = ((invoiceBatches as any[]) || []).map((invoiceBatch: any) => {
     console.log('Processing batch:', invoiceBatch);
     
@@ -180,48 +178,21 @@ export default function InvoicePrint() {
     );
   }
 
-  // Error state
-  if (invoiceError) {
-    console.error('Invoice error details:', invoiceError);
+  // Error states
+  if (invoiceError || !invoice) {
     return (
       <div className="min-h-screen bg-white p-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">
             Erro ao carregar fatura
           </h1>
-          <p className="text-gray-600 mb-4">
-            ID da fatura: {invoiceId}
-          </p>
           <p className="text-gray-600">
-            {invoiceError instanceof Error ? invoiceError.message : 'Erro desconhecido'}
-          </p>
-          <div className="mt-4 text-sm text-gray-500">
-            <p>Status da requisição: {(invoiceError as any)?.status || 'Desconhecido'}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Data validation
-  if (!invoice || !workshop) {
-    return (
-      <div className="min-h-screen bg-white p-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">
-            Dados incompletos
-          </h1>
-          <p className="text-gray-600">
-            Fatura: {invoice ? 'OK' : 'Não encontrada'}<br/>
-            Oficina: {workshop ? 'OK' : 'Não encontrada'}<br/>
-            Lotes: {invoiceBatches ? invoiceBatches.length : 0} encontrados
+            {invoiceError ? 'Erro na API' : 'Fatura não encontrada'}
           </p>
         </div>
       </div>
     );
   }
-
-
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
@@ -243,11 +214,11 @@ export default function InvoicePrint() {
           <p className="font-bold text-2xl text-blue-700 mb-2">{(workshop as any)?.name || 'Workshop não encontrado'}</p>
           <div className="grid grid-cols-2 gap-8 mt-4">
             <div className="text-left">
-              <p><strong>Número da Fatura:</strong> {(invoice as any)?.invoiceNumber || (invoice as any)?.invoice_number || 'N/A'}</p>
-              <p><strong>Data de Emissão:</strong> {formatDate((invoice as any)?.issueDate || (invoice as any)?.issue_date || new Date().toISOString())}</p>
+              <p><strong>Número da Fatura:</strong> {(invoice as any)?.invoiceNumber || 'N/A'}</p>
+              <p><strong>Data de Emissão:</strong> {formatDate((invoice as any)?.issueDate || new Date().toISOString())}</p>
             </div>
             <div className="text-left">
-              <p><strong>Data de Vencimento:</strong> {formatDate((invoice as any)?.dueDate || (invoice as any)?.due_date || new Date().toISOString())}</p>
+              <p><strong>Data de Vencimento:</strong> {formatDate((invoice as any)?.dueDate || new Date().toISOString())}</p>
               <p><strong>Status:</strong> <span className={`font-semibold ${(invoice as any)?.status === 'pending' ? 'text-orange-600' : 'text-green-600'}`}>
                 {(invoice as any)?.status === 'pending' ? 'Aberto' : 'Faturado'}
               </span></p>
@@ -403,7 +374,7 @@ export default function InvoicePrint() {
           <div className="grid grid-cols-2 gap-6">
             <div>
               <p><strong>Forma de Pagamento:</strong> Conforme acordo</p>
-              <p><strong>Prazo de Pagamento:</strong> {formatDate((invoice as any)?.dueDate || (invoice as any)?.due_date || new Date().toISOString())}</p>
+              <p><strong>Prazo de Pagamento:</strong> {formatDate((invoice as any)?.dueDate || new Date().toISOString())}</p>
             </div>
             <div>
               <p><strong>Status:</strong> <span className={`font-semibold ${(invoice as any)?.status === 'pending' ? 'text-orange-600' : 'text-green-600'}`}>

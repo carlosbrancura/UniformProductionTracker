@@ -709,6 +709,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get batch products for a single batch
+  app.get("/api/batch-products/:batchId", async (req, res) => {
+    try {
+      const batchId = parseInt(req.params.batchId);
+      if (isNaN(batchId)) {
+        return res.status(400).json({ message: "Invalid batch ID" });
+      }
+
+      const batchProducts = await storage.getBatchProducts(batchId);
+      res.json(batchProducts);
+    } catch (error) {
+      console.error("Error fetching batch products:", error);
+      res.status(500).json({ error: "Failed to fetch batch products" });
+    }
+  });
+
   // Serve uploaded images
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
