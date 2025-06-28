@@ -78,26 +78,20 @@
         }
         
         .batch-header {
-            background: #f8f9fa;
-            color: #333;
-            border: 2px solid #ddd;
-            padding: 10px 15px;
-            border-radius: 6px;
             font-size: 16px;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
+            color: #333;
         }
         
         .product-line {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            padding: 8px 15px;
-            margin-bottom: 5px;
-            border-radius: 4px;
             font-size: 14px;
+            margin-left: 20px;
+            margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 3px 0;
         }
         
         .product-info {
@@ -106,18 +100,8 @@
         
         .product-values {
             display: flex;
-            gap: 20px;
+            gap: 15px;
             align-items: center;
-        }
-        
-        .batch-total {
-            background: #e3f2fd;
-            font-weight: bold;
-            color: #2563eb;
-            padding: 10px 15px;
-            border-radius: 4px;
-            text-align: right;
-            margin-top: 10px;
         }
         
         .total-section {
@@ -211,19 +195,14 @@
             
             .batch-header {
                 font-size: 14px;
-                padding: 8px 12px;
-                margin-bottom: 8px;
+                margin-bottom: 4px;
             }
             
             .product-line {
-                padding: 6px 12px;
                 font-size: 12px;
-                margin-bottom: 3px;
-            }
-            
-            .batch-total {
-                padding: 8px 12px;
-                margin-top: 8px;
+                margin-left: 15px;
+                margin-bottom: 6px;
+                padding: 2px 0;
             }
             
             .grand-total .amount {
@@ -455,26 +434,21 @@
                         <div class="batch-header">
                             Lote ${batch.code} - Data de Corte: ${formatDate(batch.cutDate)}
                         </div>
-                        
                         ${batch.products.length > 0 ? batch.products.map(product => `
-                            <div class="product-line">
-                                <div class="product-info">
-                                    <strong>${product.productName}</strong> - Cor: ${product.selectedColor} - Tam.: ${product.selectedSize} - Quant.: ${product.quantity}
-                                </div>
-                                <div class="product-values">
-                                    <span>Valor Unit.: ${formatCurrency(product.productionValue)}</span>
-                                    <span><strong>Valor Total: ${formatCurrency(product.total)}</strong></span>
-                                </div>
+                        <div class="product-line">
+                            <div class="product-info">
+                                ${product.productName} - Cor: ${product.selectedColor} - Tam.: ${product.selectedSize} - Quant.: ${product.quantity}
                             </div>
-                        `).join('') : `
-                            <div class="product-line" style="text-align: center; color: #666; font-style: italic;">
-                                Nenhum produto encontrado para este lote
+                            <div class="product-values">
+                                <span>Valor Unit.: ${formatCurrency(product.productionValue)}</span>
+                                <span>Valor Total: ${formatCurrency(product.total)}</span>
                             </div>
-                        `}
-                        
-                        <div class="batch-total">
-                            <strong>Subtotal do Lote: ${formatCurrency(batch.batchTotal)}</strong>
                         </div>
+                        `).join('') : `
+                        <div class="product-line" style="text-align: center; color: #666; font-style: italic; margin-left: 20px;">
+                            Nenhum produto encontrado para este lote
+                        </div>
+                        `}
                     </div>
                 `).join('')}
                 
