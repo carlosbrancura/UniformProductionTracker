@@ -66,9 +66,16 @@ export default function InvoicePrint() {
   useEffect(() => {
     if (invoice && invoiceBatches && workshop && products && 
         !invoiceLoading && !batchesLoading && !workshopLoading && !productsLoading && !batchProductsLoading) {
-      setTimeout(() => {
-        window.print();
-      }, 1000);
+      // Use a longer delay to ensure DOM is stable
+      const timer = setTimeout(() => {
+        try {
+          window.print();
+        } catch (error) {
+          console.error('Print error:', error);
+        }
+      }, 2000);
+      
+      return () => clearTimeout(timer);
     }
   }, [invoice, invoiceBatches, workshop, products, batchProducts, invoiceLoading, batchesLoading, workshopLoading, productsLoading, batchProductsLoading]);
 
@@ -179,7 +186,7 @@ export default function InvoicePrint() {
             Carregando fatura...
           </h1>
           <div className="text-sm text-gray-500">
-            <p>ID da fatura: {invoiceId}</p>
+            <p>ID da fatura: {finalInvoiceId}</p>
             <p>Invoice: {invoiceLoading ? 'Carregando...' : 'OK'}</p>
             <p>Lotes: {batchesLoading ? 'Carregando...' : 'OK'}</p>
             <p>Oficina: {workshopLoading ? 'Carregando...' : 'OK'}</p>

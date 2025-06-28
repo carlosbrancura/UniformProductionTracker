@@ -14,9 +14,9 @@ import Navigation from "@/components/Navigation";
 
 function Router() {
   const [location] = useLocation();
-  const isPrintPage = location.startsWith('/invoice/print/');
-
-  if (isPrintPage) {
+  
+  // Handle print pages with minimal layout
+  if (location.startsWith('/invoice/print/')) {
     return (
       <Switch>
         <Route path="/invoice/print/:invoiceId" component={InvoicePrint} />
@@ -24,6 +24,7 @@ function Router() {
     );
   }
 
+  // Handle regular pages with full layout
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white shadow-sm border-b">
