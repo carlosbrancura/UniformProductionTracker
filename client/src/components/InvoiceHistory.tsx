@@ -48,10 +48,9 @@ export default function InvoiceHistory({ workshopId }: InvoiceHistoryProps) {
   // Mark invoice as paid mutation
   const markInvoiceAsPaidMutation = useMutation({
     mutationFn: async (invoiceId: number) => {
-      const response = await fetch(`/api/invoices/${invoiceId}`, {
+      const response = await fetch(`/api/invoices/${invoiceId}/pay`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'paid', paidDate: new Date().toISOString() })
+        headers: { 'Content-Type': 'application/json' }
       });
       
       if (!response.ok) {
