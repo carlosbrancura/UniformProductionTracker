@@ -503,6 +503,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Invoice Management Routes
   
+  // Get single invoice by ID
+  app.get("/api/invoices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      console.log(`Fetching invoice with ID: ${id}`);
+      
+      if (isNaN(id)) {
+        console.log('Invalid invoice ID provided');
+        return res.status(400).json({ message: "Invalid invoice ID" });
+      }
+      
+      const invoice = await storage.getInvoice(id);
+      console.log('Invoice fetched from storage:', invoice);
+      
+      if (!invoice) {
+        console.log(`Invoice with ID ${id} not found`);
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error fetching invoice:", error);
+      res.status(500).json({ message: "Failed to fetch invoice", error: error.message });
+    }
+  });
+  
   // Get all invoices
   app.get("/api/invoices", async (req, res) => {
     try {

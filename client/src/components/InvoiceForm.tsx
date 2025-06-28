@@ -169,7 +169,9 @@ export default function InvoiceForm({ workshop, unpaidBatches, onClose }: Invoic
       queryClient.refetchQueries({ queryKey: ['/api/batches'] });
       
       // Open print page in new window
+      console.log('Opening print page for invoice:', data);
       const printUrl = `/invoice/print/${data.id}`;
+      console.log('Print URL:', printUrl);
       window.open(printUrl, '_blank', 'width=800,height=600,scrollbars=yes');
       
       // Force window reload to ensure fresh data
