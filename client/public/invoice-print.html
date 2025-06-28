@@ -26,47 +26,62 @@
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             border-bottom: 2px solid #333;
-            padding-bottom: 20px;
+            padding-bottom: 15px;
         }
         
         .header h1 {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: bold;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         
         .workshop-name {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             color: #2563eb;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
         
         .invoice-info {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 20px;
-        }
-        
-        .info-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-        }
-        
-        .info-section h3 {
-            font-size: 18px;
-            font-weight: bold;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
             margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .invoice-info-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        
+        .invoice-info-item .label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .invoice-info-item .value {
+            font-size: 14px;
+            font-weight: bold;
             color: #333;
         }
         
-        .info-section p {
-            margin-bottom: 8px;
+        .workshop-info {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .workshop-info .manager {
+            font-size: 14px;
+            color: #666;
         }
         
         .batch-section {
@@ -169,12 +184,45 @@
                 padding: 15px;
             }
             
+            .header {
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+            }
+            
             .header h1 {
-                font-size: 28px;
+                font-size: 24px;
+                margin-bottom: 6px;
             }
             
             .workshop-name {
-                font-size: 20px;
+                font-size: 18px;
+                margin-bottom: 8px;
+            }
+            
+            .invoice-info {
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+            
+            .invoice-info-item {
+                padding: 8px;
+            }
+            
+            .invoice-info-item .label {
+                font-size: 10px;
+            }
+            
+            .invoice-info-item .value {
+                font-size: 12px;
+            }
+            
+            .workshop-info {
+                padding: 8px;
+                margin-bottom: 10px;
+            }
+            
+            .workshop-info .manager {
+                font-size: 12px;
             }
             
             .batch-header {
@@ -382,31 +430,27 @@
                     <h1>FATURA DE SERVIÇOS</h1>
                     <div class="workshop-name">${workshop.name}</div>
                     <div class="invoice-info">
-                        <div>
-                            <strong>Número da Fatura:</strong> ${invoice.invoiceNumber}<br>
-                            <strong>Data de Emissão:</strong> ${formatDate(invoice.issueDate)}
+                        <div class="invoice-info-item">
+                            <div class="label">Número da Fatura</div>
+                            <div class="value">${invoice.invoiceNumber}</div>
                         </div>
-                        <div>
-                            <strong>Data de Vencimento:</strong> ${formatDate(invoice.dueDate)}<br>
-                            <strong>Status:</strong> ${invoice.status === 'pending' ? 'Aberto' : 'Faturado'}
+                        <div class="invoice-info-item">
+                            <div class="label">Data de Emissão</div>
+                            <div class="value">${formatDate(invoice.issueDate)}</div>
+                        </div>
+                        <div class="invoice-info-item">
+                            <div class="label">Data de Vencimento</div>
+                            <div class="value">${formatDate(invoice.dueDate)}</div>
+                        </div>
+                        <div class="invoice-info-item">
+                            <div class="label">Status</div>
+                            <div class="value">${invoice.status === 'pending' ? 'Aberto' : 'Faturado'}</div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="info-section">
-                    <h3>Informações da Oficina</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div>
-                            <p><strong>Nome:</strong> ${workshop.name}</p>
-                            <p><strong>Responsável:</strong> ${workshop.manager || 'N/A'}</p>
-                            <p><strong>Contato:</strong> ${workshop.contact || 'N/A'}</p>
-                        </div>
-                        <div>
-                            <p><strong>Endereço:</strong> ${workshop.address || 'N/A'}</p>
-                            <p><strong>Telefone:</strong> ${workshop.phone || 'N/A'}</p>
-                            <p><strong>Email:</strong> ${workshop.email || 'N/A'}</p>
-                        </div>
-                    </div>
+                <div class="workshop-info">
+                    <div class="manager">Responsável: <strong>${workshop.manager || 'N/A'}</strong></div>
                 </div>
                 
                 ${invoice.notes ? `
@@ -465,14 +509,26 @@
                 `).join('')}
                 
                 <div class="total-section">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
-                        <div class="info-section">
-                            <h3>Resumo da Fatura</h3>
-                            <p><strong>Total de Lotes:</strong> ${processedBatches.length}</p>
-                            <p><strong>Total de Peças:</strong> ${processedBatches.reduce((sum, batch) => {
-                                return sum + batch.products.reduce((batchSum, product) => batchSum + product.quantity, 0);
-                            }, 0)}</p>
-                            <p><strong>Status:</strong> ${invoice.status === 'pending' ? 'Valor em aberto' : 'Valor faturado'}</p>
+                    <div style="display: grid; grid-template-columns: 1fr 300px; gap: 30px; align-items: center;">
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center;">
+                                <div>
+                                    <div style="font-size: 12px; color: #666;">Total de Lotes</div>
+                                    <div style="font-size: 18px; font-weight: bold; color: #333;">${processedBatches.length}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 12px; color: #666;">Total de Peças</div>
+                                    <div style="font-size: 18px; font-weight: bold; color: #333;">${processedBatches.reduce((sum, batch) => {
+                                        return sum + batch.products.reduce((batchSum, product) => batchSum + product.quantity, 0);
+                                    }, 0)}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 12px; color: #666;">Status</div>
+                                    <div style="font-size: 14px; font-weight: bold; color: ${invoice.status === 'pending' ? '#dc2626' : '#16a34a'};">
+                                        ${invoice.status === 'pending' ? 'Valor em aberto' : 'Valor faturado'}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="grand-total">
