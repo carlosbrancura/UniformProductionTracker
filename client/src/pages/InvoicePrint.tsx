@@ -187,8 +187,15 @@ export default function InvoicePrint() {
             Erro ao carregar fatura
           </h1>
           <p className="text-gray-600">
-            {invoiceError ? 'Erro na API' : 'Fatura não encontrada'}
+            {invoiceError ? `Erro na API: ${invoiceError}` : 'Fatura não encontrada'}
           </p>
+          <div className="mt-4 text-sm text-gray-500">
+            <p>ID da fatura solicitada: {invoiceId}</p>
+            <p>Status da busca: {invoiceLoading ? 'Carregando...' : 'Finalizada'}</p>
+            {invoiceError && (
+              <p>Detalhes do erro: {JSON.stringify(invoiceError)}</p>
+            )}
+          </div>
         </div>
       </div>
     );

@@ -519,7 +519,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!invoice) {
         console.log(`Invoice with ID ${id} not found`);
-        return res.status(404).json({ message: "Invoice not found" });
+        // Let's also check what invoices exist
+        const allInvoices = await storage.getAllInvoices();
+        console.log('Available invoice IDs:', allInvoices.map(inv => inv.id));
+        return res.status(404).json({ 
+          message: "Invoice not found", 
+          requestedId: id,
+          availableIds: allInvoices.map(inv => inv.id)
+        });
       }
       
       res.json(invoice);
