@@ -5,6 +5,11 @@ import { useEffect } from "react";
 export default function InvoicePrint() {
   const { invoiceId } = useParams<{ invoiceId: string }>();
 
+  // Debug logging for URL params
+  console.log('InvoicePrint - Current URL:', window.location.href);
+  console.log('InvoicePrint - Parsed invoiceId:', invoiceId);
+  console.log('InvoicePrint - All params:', useParams());
+
   // Fetch invoice data
   const { data: invoice, isLoading: invoiceLoading, error: invoiceError } = useQuery({
     queryKey: [`/api/invoices/${invoiceId}`],
