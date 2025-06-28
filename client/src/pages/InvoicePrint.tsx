@@ -9,17 +9,24 @@ export default function InvoicePrint() {
   console.log('InvoicePrint - Current URL:', window.location.href);
   console.log('InvoicePrint - Parsed invoiceId:', invoiceId);
   console.log('InvoicePrint - All params:', useParams());
+  
+  // Extract invoiceId from URL if useParams fails
+  const urlParts = window.location.pathname.split('/');
+  const urlInvoiceId = urlParts[urlParts.length - 1];
+  const finalInvoiceId = invoiceId || urlInvoiceId;
+  
+  console.log('InvoicePrint - Final invoiceId:', finalInvoiceId);
 
   // Fetch invoice data
   const { data: invoice, isLoading: invoiceLoading, error: invoiceError } = useQuery({
-    queryKey: [`/api/invoices/${invoiceId}`],
-    enabled: !!invoiceId
+    queryKey: [`/api/invoices/${finalInvoiceId}`],
+    enabled: !!finalInvoiceId
   });
 
   // Fetch invoice batches
   const { data: invoiceBatches, isLoading: batchesLoading } = useQuery({
-    queryKey: [`/api/invoices/${invoiceId}/batches`],
-    enabled: !!invoiceId
+    queryKey: [`/api/invoices/${finalInvoiceId}/batches`],
+    enabled: !!finalInvoiceId
   });
 
   // Fetch workshop data
@@ -152,6 +159,7 @@ export default function InvoicePrint() {
   // Debug logging
   console.log('InvoicePrint Debug:', {
     invoiceId,
+    finalInvoiceId,
     invoice,
     invoiceBatches,
     workshop,
@@ -195,7 +203,8 @@ export default function InvoicePrint() {
             {invoiceError ? `Erro na API: ${invoiceError}` : 'Fatura não encontrada'}
           </p>
           <div className="mt-4 text-sm text-gray-500">
-            <p>ID da fatura solicitada: {invoiceId}</p>
+            <p>ID da fatura solicitada: {finalInvoiceId}</p>
+            <p>URL atual: {window.location.href}</p>
             <p>Status da busca: {invoiceLoading ? 'Carregando...' : 'Finalizada'}</p>
             {invoiceError && (
               <p>Detalhes do erro: {JSON.stringify(invoiceError)}</p>

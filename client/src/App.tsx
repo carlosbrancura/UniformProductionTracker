@@ -19,9 +19,7 @@ function Router() {
   if (isPrintPage) {
     return (
       <Switch>
-        <Route path="/invoice/print/:id">
-          {(params) => <InvoicePrint />}
-        </Route>
+        <Route path="/invoice/print/:invoiceId" component={InvoicePrint} />
       </Switch>
     );
   }
