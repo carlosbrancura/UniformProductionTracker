@@ -8,6 +8,7 @@
     "start": "node ../dist/server/index.js"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
     "connect-pg-simple": "^10.0.0",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
