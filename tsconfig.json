@@ -10,6 +10,7 @@
     "skipLibCheck": true,
     "baseUrl": "../", 
     "paths": {
+      "@/*": ["client/src/*"],     
       "@shared/*": ["shared/*"]
     }
   },
