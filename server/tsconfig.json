@@ -1,11 +1,12 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".." 
     "outDir": "../dist/server",
     "rootDir": "../",
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "include": ["./**/*.ts"],
+  "include": ["../shared/**/*", "./**/*"],
   "exclude": ["../client", "../node_modules"]
 }
