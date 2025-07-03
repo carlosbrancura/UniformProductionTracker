@@ -5,7 +5,8 @@
     "outDir": "../dist/server",
     "rootDir": "../",
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": ["../shared/**/*", "./**/*"],
   "exclude": ["../client", "../node_modules"]
