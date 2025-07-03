@@ -133,7 +133,9 @@ export class ProductsService {
   async deleteProduct(id: number) {
     try {
       const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
-      return result.rowCount > 0;
+      if (result?.rowCount && result.rowCount > 0) {
+        // código seguro aqui
+      }
     } catch (error: any) {
       console.error('Error deleting product:', error.message);
       throw new Error('Failed to delete product');
