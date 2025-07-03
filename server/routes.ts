@@ -347,7 +347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paramIndex++;
         }
       }
-      
+     
       if (workshopId !== undefined) {
         updateFields.push(`workshop_id = $${paramIndex}`);
         params.push(Number(workshopId));
