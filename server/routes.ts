@@ -350,7 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (workshopId !== undefined) {
         updateFields.push(`workshop_id = $${paramIndex}`);
-        params.push(workshopId);
+        params.push(Number(workshopId));
         paramIndex++;
       }
       
@@ -531,9 +531,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(invoice);
     } catch (error) {
-      console.error("Error fetching invoice:", error);
-      res.status(500).json({ message: "Failed to fetch invoice", error: error.message });
+    if (error instanceof Error) {
+      console.log(error.message)
+    } else {
+      console.log(String(error))
     }
+  }
   });
   
   // Get all invoices
