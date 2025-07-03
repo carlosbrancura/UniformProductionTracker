@@ -10,6 +10,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "connect-pg-simple": "^10.0.0",
+    "mysql2": "^3.9.2",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
     "express": "^4.21.2",
