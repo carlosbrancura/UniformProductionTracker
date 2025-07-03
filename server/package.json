@@ -29,7 +29,6 @@
       "@vitejs/plugin-react": "^4.3.2",
       "@replit/vite-plugin-cartographer": "^0.2.5",
       "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
-      "@types/vite": "^5.0.6",
       "nanoid": "^5.0.6",
       "drizzle-orm": "^0.39.1",
       "drizzle-zod": "^0.7.0",
